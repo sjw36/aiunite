@@ -1,0 +1,2 @@
+add_subdirectory(execution_engine)
+add_subdirectory(kernel_generator)
