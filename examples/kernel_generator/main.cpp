@@ -12,11 +12,25 @@
 
 #include <string>
 
-void service_cb(AIURequest request) {
-  // MlirModule module = AIUGetModule(request);
-  // mlir::ModuleOp mod = unwrap(module);
+AIUResponseCode service_cb(AIURequest request, AIUSolution solution) {
+
+  MlirModule c_mod = AIUGetModule(request);
+  mlir::ModuleOp mod = unwrap(c_mod);
   // mod.dump();
-  assert(0);
+
+  switch (AIUGetRequestCode(request)) {
+  case AIU_REQUEST_GET:
+    // lookup or compile
+    AIUSetModule(solution, c_mod);
+    break;
+  case AIU_REQUEST_TUNE:
+    break;
+  case AIU_REQUEST_PARTITION:
+    AIUSetModule(solution, c_mod);
+    break;
+  }
+
+  return AIU_RESPONSE_SUCCESS;
 }
 
 int main(int argc, char **argv) {

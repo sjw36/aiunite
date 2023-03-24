@@ -6,7 +6,7 @@
 #ifndef AIUNITE_SERVER_H
 #define AIUNITE_SERVER_H
 
-#include "protocol.h"
+#include <aiunite/protocol.h>
 
 #include <mlir-c/IR.h>
 
@@ -14,9 +14,7 @@
 /*  REGISTRY MGMT                                                             */
 /******************************************************************************/
 
-extern "C"
-AIUResult
-AIURegister(const char *filename);
+extern "C" AIUResultCode AIURegister(const char *filename);
 
 /******************************************************************************/
 /*  SERVICE MGMT                                                              */
@@ -28,17 +26,22 @@ typedef _AIUContext *AIUContext;
 struct _AIURequest;
 typedef _AIURequest *AIURequest;
 
-typedef void (*AIUCallBack)(AIURequest request);
+struct _AIUSolution;
+typedef _AIUSolution *AIUSolution;
 
-extern "C"
-AIUResult
-AIUCreateService(int port, AIUCallBack cb);
+typedef AIUResponseCode (*AIUCallBack)(AIURequest request,
+                                       AIUSolution solution);
 
+extern "C" AIUResultCode AIUCreateService(int port, AIUCallBack cb);
 
 /******************************************************************************/
-/*  SERVICE MGMT                                                              */
+/*  WALK                                                               */
 /******************************************************************************/
 
+extern "C" MlirModule AIUGetModule(AIURequest request);
 
+extern "C" AIURequestCode AIUGetRequestCode(AIURequest request);
+
+extern "C" AIUResultCode AIUSetModule(AIUSolution solution, MlirModule module);
 
 #endif /* AIUNITE_SERVER_H */

@@ -9,6 +9,11 @@
 #include <mlir/Dialect/Tosa/IR/TosaOps.h>
 #include <mlir/IR/BuiltinOps.h>
 
+#include <mlir/Parser/Parser.h>
+#include <mlir/Support/FileUtilities.h>
+
+#include <llvm/Support/SourceMgr.h>
+
 #include <aiunite/provider.h>
 
 #include <boost/beast/core.hpp>
@@ -30,6 +35,40 @@
 #include <string>
 #include <thread>
 #include <vector>
+
+struct _AIURequest {
+  AIURequestCode code;
+  std::string model_name;
+  mlir::DialectRegistry registry;
+  mlir::MLIRContext context;
+  mlir::ModuleOp module;
+
+  _AIURequest(AIURequestCode rcode, const std::string &name,
+              const std::string &ir)
+      : code(rcode), model_name(name), context(registry) {
+    context.loadDialect<mlir::tosa::TosaDialect, mlir::func::FuncDialect>();
+    //,math::MathDialect, arith::ArithDialect>();
+
+    auto mlir_buffer = llvm::MemoryBuffer::getMemBuffer(ir);
+    llvm::SourceMgr sourceMgr;
+    sourceMgr.AddNewSourceBuffer(std::move(mlir_buffer), llvm::SMLoc());
+    mlir::OwningOpRef<mlir::ModuleOp> moduleRef =
+        mlir::parseSourceFile<mlir::ModuleOp>(sourceMgr, &context);
+    if (moduleRef)
+      module = moduleRef.release();
+  }
+};
+
+struct _AIUSolution {
+  AIUResponseCode code;
+  std::string body;
+
+  void setResult(AIUResponseCode rcode, mlir::ModuleOp module) {
+    code = rcode;
+    llvm::raw_string_ostream os(body);
+    module.print(os);
+  }
+};
 
 namespace beast = boost::beast;                 // from <boost/beast.hpp>
 namespace http = beast::http;                   // from <boost/beast/http.hpp>
@@ -105,34 +144,30 @@ path_cat(
 // request. The type of the response object depends on the
 // contents of the request, so the interface requires the
 // caller to pass a generic lambda for receiving the response.
-template<
-    class Body, class Allocator,
-    class Send>
-void
-handle_request(
-    beast::string_view doc_root,
-    http::request<Body, http::basic_fields<Allocator>>&& req,
-    Send&& send)
-{
+template <class Body, class Allocator, class Send>
+void handle_request(beast::string_view doc_root, AIUCallBack callback,
+                    http::request<Body, http::basic_fields<Allocator>> &&req,
+                    Send &&send) {
   static std::string api_version = AIUNITE_VERSION_STR;
-    // Returns a bad request response
-    auto const bad_request =
-    [&req](beast::string_view why)
-    {
-      http::response<http::string_body> res{http::status::bad_request, req.version()};
-      res.set(http::field::user_agent, api_version);
-      res.set(http::field::server, api_version);
-      res.set(http::field::content_type, "text/html");
-      res.keep_alive(req.keep_alive());
-      res.body() = std::string(why);
-      res.prepare_payload();
-      return res;
-    };
 
-    // Returns a not found response
-    auto const not_found =
-    [&req](beast::string_view target)
-    {
+  std::cout << "REQUEST: " << req << std::endl;
+
+  // Returns a bad request response
+  auto const bad_request = [&req](beast::string_view why) {
+    http::response<http::string_body> res{http::status::bad_request,
+                                          req.version()};
+    res.set(http::field::user_agent, api_version);
+    res.set(http::field::server, api_version);
+    res.set(http::field::content_type, "text/html");
+    res.keep_alive(req.keep_alive());
+    res.body() = std::string(why);
+    res.prepare_payload();
+    return res;
+  };
+
+  // Returns a not found response
+  auto const not_found =
+      [&req](beast::string_view target) {
         http::response<http::string_body> res{http::status::not_found, req.version()};
         res.set(http::field::user_agent, api_version);
         res.set(http::field::server, api_version);
@@ -141,12 +176,11 @@ handle_request(
         res.body() = "The resource '" + std::string(target) + "' was not found.";
         res.prepare_payload();
         return res;
-    };
+      };
 
-    // Returns a server error response
-    auto const server_error =
-    [&req](beast::string_view what)
-    {
+  // Returns a server error response
+  auto const server_error =
+      [&req](beast::string_view what) {
         http::response<http::string_body> res{http::status::internal_server_error, req.version()};
         res.set(http::field::user_agent, api_version);
         res.set(http::field::server, api_version);
@@ -155,51 +189,46 @@ handle_request(
         res.body() = "An error occurred: '" + std::string(what) + "'";
         res.prepare_payload();
         return res;
-    };
+      };
 
-    // Make sure we can handle the method
-    if( req.method() != http::verb::get &&
-        req.method() != http::verb::head)
-        return send(bad_request("Unknown HTTP-method"));
+  // Make sure we can handle the method
+  if (req.method() != http::verb::get)
+    return send(bad_request("Unsupported HTTP-method"));
 
-    // Request path must be absolute and not contain "..".
-    if( req.target().empty() ||
-        req.target()[0] != '/' ||
-        req.target().find("..") != beast::string_view::npos)
-        return send(bad_request("Illegal request-target"));
+  // // Request path must be absolute and not contain "..".
+  // if( req.target().empty() ||
+  //     req.target()[0] != '/' ||
+  //     req.target().find("..") != beast::string_view::npos)
+  //     return send(bad_request("Illegal request-target"));
 
-    // Build the path to the requested file
-    std::string path = path_cat(doc_root, req.target());
-    if(req.target().back() == '/')
-        path.append("index.html");
+  // Build the path to the requested file
 
-    // Attempt to open the file
-    beast::error_code ec;
-    http::file_body::value_type body;
-    body.open(path.c_str(), beast::file_mode::scan, ec);
+  std::string model_name = req.target().to_string();
+  std::string req_body = req.body();
 
-    // Handle the case where the file doesn't exist
-    if(ec == beast::errc::no_such_file_or_directory)
-        return send(not_found(req.target()));
+  auto code = req[http::field::protocol_request];
+  auto code_v = AIUGetRequestCode(code.to_string().c_str());
 
-    // Handle an unknown error
-    if(ec)
-        return send(server_error(ec.message()));
+  _AIURequest aiu_req(code_v, model_name, req_body);
+  _AIUSolution aiu_sol;
+
+  AIUResponseCode res_code = (*callback)(&aiu_req, &aiu_sol);
+
+  http::response<http::string_body> res{http::status::ok, req.version()};
+  res.set(http::field::user_agent, api_version);
+  res.set(http::field::server, api_version);
+  res.set(http::field::content_type, "text/xmodel");
+  req.set(http::field::content_version, "1.0");
+  res.content_length(aiu_sol.body.size());
+  res.body() = aiu_sol.body;
+  res.keep_alive(req.keep_alive());
+  return send(std::move(res));
+
+#if 0
+    http::file_body::value_type body{};
 
     // Cache the size since we need it after the move
     auto const size = body.size();
-
-    // Respond to HEAD request
-    if(req.method() == http::verb::head)
-    {
-        http::response<http::empty_body> res{http::status::ok, req.version()};
-        res.set(http::field::user_agent, api_version);
-        res.set(http::field::server, api_version);
-        res.set(http::field::content_type, mime_type(path));
-        res.content_length(size);
-        res.keep_alive(req.keep_alive());
-        return send(std::move(res));
-    }
 
     // Respond to GET request
     http::response<http::file_body> res{
@@ -213,6 +242,7 @@ handle_request(
     res.content_length(size);
     res.keep_alive(req.keep_alive());
     return send(std::move(res));
+#endif
 }
 
 //------------------------------------------------------------------------------
@@ -553,17 +583,15 @@ class http_session
 
 protected:
     beast::flat_buffer buffer_;
+    AIUCallBack callback_;
 
-public:
+  public:
     // Construct the session
-    http_session(
-        beast::flat_buffer buffer,
-        std::shared_ptr<std::string const> const& doc_root)
-        : doc_root_(doc_root)
-        , queue_(*this)
-        , buffer_(std::move(buffer))
-    {
-    }
+    http_session(beast::flat_buffer buffer,
+                 std::shared_ptr<std::string const> const &doc_root,
+                 AIUCallBack callback)
+        : doc_root_(doc_root), queue_(*this), buffer_(std::move(buffer)),
+          callback_(callback) {}
 
     void
     do_read()
@@ -616,7 +644,7 @@ public:
         }
 
         // Send the response
-        handle_request(*doc_root_, parser_->release(), queue_);
+        handle_request(*doc_root_, callback_, parser_->release(), queue_);
 
         // If we aren't at the queue limit, try to pipeline another request
         if(! queue_.is_full())
@@ -658,47 +686,28 @@ class plain_http_session
 
 public:
     // Create the session
-    plain_http_session(
-        beast::tcp_stream&& stream,
-        beast::flat_buffer&& buffer,
-        std::shared_ptr<std::string const> const& doc_root)
-        : http_session<plain_http_session>(
-            std::move(buffer),
-            doc_root)
-        , stream_(std::move(stream))
-    {
-    }
+  plain_http_session(beast::tcp_stream &&stream, beast::flat_buffer &&buffer,
+                     std::shared_ptr<std::string const> const &doc_root,
+                     AIUCallBack callback)
+      : http_session<plain_http_session>(std::move(buffer), doc_root, callback),
+        stream_(std::move(stream)) {}
 
-    // Start the session
-    void
-    run()
-    {
-        this->do_read();
-    }
+  // Start the session
+  void run() { this->do_read(); }
 
-    // Called by the base class
-    beast::tcp_stream&
-    stream()
-    {
-        return stream_;
-    }
+  // Called by the base class
+  beast::tcp_stream &stream() { return stream_; }
 
-    // Called by the base class
-    beast::tcp_stream
-    release_stream()
-    {
-        return std::move(stream_);
-    }
+  // Called by the base class
+  beast::tcp_stream release_stream() { return std::move(stream_); }
 
-    // Called by the base class
-    void
-    do_eof()
-    {
-        // Send a TCP shutdown
-        beast::error_code ec;
-        stream_.socket().shutdown(tcp::socket::shutdown_send, ec);
+  // Called by the base class
+  void do_eof() {
+    // Send a TCP shutdown
+    beast::error_code ec;
+    stream_.socket().shutdown(tcp::socket::shutdown_send, ec);
 
-        // At this point the connection is closed gracefully
+    // At this point the connection is closed gracefully
     }
 };
 
@@ -713,33 +722,24 @@ class ssl_http_session
 
 public:
     // Create the http_session
-    ssl_http_session(
-        beast::tcp_stream&& stream,
-        ssl::context& ctx,
-        beast::flat_buffer&& buffer,
-        std::shared_ptr<std::string const> const& doc_root)
-        : http_session<ssl_http_session>(
-            std::move(buffer),
-            doc_root)
-        , stream_(std::move(stream), ctx)
-    {
-    }
+  ssl_http_session(beast::tcp_stream &&stream, ssl::context &ctx,
+                   beast::flat_buffer &&buffer,
+                   std::shared_ptr<std::string const> const &doc_root,
+                   AIUCallBack callback)
+      : http_session<ssl_http_session>(std::move(buffer), doc_root, callback),
+        stream_(std::move(stream), ctx) {}
 
-    // Start the session
-    void
-    run()
-    {
-        // Set the timeout.
-        beast::get_lowest_layer(stream_).expires_after(std::chrono::seconds(30));
+  // Start the session
+  void run() {
+    // Set the timeout.
+    beast::get_lowest_layer(stream_).expires_after(std::chrono::seconds(30));
 
-        // Perform the SSL handshake
-        // Note, this is the buffered version of the handshake.
-        stream_.async_handshake(
-            ssl::stream_base::server,
-            buffer_.data(),
-            beast::bind_front_handler(
-                &ssl_http_session::on_handshake,
-                shared_from_this()));
+    // Perform the SSL handshake
+    // Note, this is the buffered version of the handshake.
+    stream_.async_handshake(
+        ssl::stream_base::server, buffer_.data(),
+        beast::bind_front_handler(&ssl_http_session::on_handshake,
+                                  shared_from_this()));
     }
 
     // Called by the base class
@@ -804,18 +804,14 @@ class detect_session : public std::enable_shared_from_this<detect_session>
     ssl::context& ctx_;
     std::shared_ptr<std::string const> doc_root_;
     beast::flat_buffer buffer_;
+    AIUCallBack callback_;
 
-public:
-    explicit
-    detect_session(
-        tcp::socket&& socket,
-        ssl::context& ctx,
-        std::shared_ptr<std::string const> const& doc_root)
-        : stream_(std::move(socket))
-        , ctx_(ctx)
-        , doc_root_(doc_root)
-    {
-    }
+  public:
+    explicit detect_session(tcp::socket &&socket, ssl::context &ctx,
+                            std::shared_ptr<std::string const> const &doc_root,
+                            AIUCallBack callback)
+        : stream_(std::move(socket)), ctx_(ctx), doc_root_(doc_root),
+          callback_(callback) {}
 
     // Launch the detector
     void
@@ -841,19 +837,17 @@ public:
         if(result)
         {
             // Launch SSL session
-            std::make_shared<ssl_http_session>(
-                std::move(stream_),
-                ctx_,
-                std::move(buffer_),
-                doc_root_)->run();
+            std::make_shared<ssl_http_session>(std::move(stream_), ctx_,
+                                               std::move(buffer_), doc_root_,
+                                               callback_)
+                ->run();
             return;
         }
 
         // Launch plain session
         std::make_shared<plain_http_session>(
-            std::move(stream_),
-            std::move(buffer_),
-            doc_root_)->run();
+            std::move(stream_), std::move(buffer_), doc_root_, callback_)
+            ->run();
     }
 };
 
@@ -864,52 +858,43 @@ class listener : public std::enable_shared_from_this<listener>
     ssl::context& ctx_;
     tcp::acceptor acceptor_;
     std::shared_ptr<std::string const> doc_root_;
+    AIUCallBack callback_;
 
-public:
-    listener(
-        net::io_context& ioc,
-        ssl::context& ctx,
-        tcp::endpoint endpoint,
-        std::shared_ptr<std::string const> const& doc_root)
-        : ioc_(ioc)
-        , ctx_(ctx)
-        , acceptor_(net::make_strand(ioc))
-        , doc_root_(doc_root)
-    {
-        beast::error_code ec;
+  public:
+    listener(net::io_context &ioc, ssl::context &ctx, tcp::endpoint endpoint,
+             std::shared_ptr<std::string const> const &doc_root,
+             AIUCallBack callback)
+        : ioc_(ioc), ctx_(ctx), acceptor_(net::make_strand(ioc)),
+          doc_root_(doc_root), callback_(callback) {
+      beast::error_code ec;
 
-        // Open the acceptor
-        acceptor_.open(endpoint.protocol(), ec);
-        if(ec)
-        {
-            fail(ec, "open");
-            return;
-        }
+      // Open the acceptor
+      acceptor_.open(endpoint.protocol(), ec);
+      if (ec) {
+        fail(ec, "open");
+        return;
+      }
 
-        // Allow address reuse
-        acceptor_.set_option(net::socket_base::reuse_address(true), ec);
-        if(ec)
-        {
-            fail(ec, "set_option");
-            return;
-        }
+      // Allow address reuse
+      acceptor_.set_option(net::socket_base::reuse_address(true), ec);
+      if (ec) {
+        fail(ec, "set_option");
+        return;
+      }
 
-        // Bind to the server address
-        acceptor_.bind(endpoint, ec);
-        if(ec)
-        {
-            fail(ec, "bind");
-            return;
-        }
+      // Bind to the server address
+      acceptor_.bind(endpoint, ec);
+      if (ec) {
+        fail(ec, "bind");
+        return;
+      }
 
-        // Start listening for connections
-        acceptor_.listen(
-            net::socket_base::max_listen_connections, ec);
-        if(ec)
-        {
-            fail(ec, "listen");
-            return;
-        }
+      // Start listening for connections
+      acceptor_.listen(net::socket_base::max_listen_connections, ec);
+      if (ec) {
+        fail(ec, "listen");
+        return;
+      }
     }
 
     // Start accepting incoming connections
@@ -941,10 +926,9 @@ private:
         else
         {
             // Create the detector http_session and run it
-            std::make_shared<detect_session>(
-                std::move(socket),
-                ctx_,
-                doc_root_)->run();
+            std::make_shared<detect_session>(std::move(socket), ctx_, doc_root_,
+                                             callback_)
+                ->run();
         }
 
         // Accept another connection
@@ -954,12 +938,9 @@ private:
 
 //------------------------------------------------------------------------------
 
-extern "C"
-AIUResult
-AIUCreateService(int port_, AIUCallBack callback) {
+extern "C" AIUResultCode AIUCreateService(int port, AIUCallBack callback) {
   const char *host = "0.0.0.0";
   auto const address = net::ip::make_address(host);
-  const unsigned short port = 8000;
   auto const doc_root = std::make_shared<std::string>(".");
   const int threads = 8;
 
@@ -973,9 +954,9 @@ AIUCreateService(int port_, AIUCallBack callback) {
   // load_server_certificate(ctx);
 
   // Create and launch a listening port
-  std::make_shared<listener>(ioc, ctx,
-                             tcp::endpoint{address, port},
-                             doc_root)->run();
+  std::make_shared<listener>(ioc, ctx, tcp::endpoint{address, port}, doc_root,
+                             callback)
+      ->run();
 
   // Capture SIGINT and SIGTERM to perform a clean shutdown
   net::signal_set signals(ioc, SIGINT, SIGTERM);
@@ -998,5 +979,20 @@ AIUCreateService(int port_, AIUCallBack callback) {
   // Block until all the threads exit
   for(auto& t : v)
     t.join();
-  return AIU_SUCCESS;
+  return AIU_FAILURE;
+}
+
+extern "C" MlirModule AIUGetModule(AIURequest request) {
+  assert(request);
+  return wrap(request->module);
+}
+
+extern "C" AIURequestCode AIUGetRequestCode(AIURequest request) {
+  assert(request);
+  return request->code;
+}
+
+extern "C" AIUResultCode AIUSetModule(AIUSolution solution, MlirModule module) {
+  assert(solution);
+  solution->setResult(0, unwrap(module));
 }

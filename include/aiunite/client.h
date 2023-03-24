@@ -6,7 +6,7 @@
 #ifndef AIUNITE_CLIENT_H
 #define AIUNITE_CLIENT_H
 
-#include "protocol.h"
+#include <aiunite/protocol.h>
 
 #include <mlir-c/IR.h>
 
@@ -14,9 +14,7 @@
 /*  REGISTRY MGMT                                                             */
 /******************************************************************************/
 
-extern "C"
-AIUResult
-AIUReadRegistry(const char *filename);
+extern "C" AIUResultCode AIUReadRegistry(const char *filename);
 
 /******************************************************************************/
 /*  CONTEXT MGMT                                                              */
@@ -24,35 +22,28 @@ AIUReadRegistry(const char *filename);
 
 struct _AIUContext;
 typedef _AIUContext *AIUContext;
-struct _AIUFunc;
-typedef _AIUFunc *AIUFunc;
+struct _AIUModel;
+typedef _AIUModel *AIUModel;
 
-extern "C"
-AIUResult
-AIUCreateContext(AIUContext *result);
+extern "C" AIUResultCode AIUCreateContext(AIUContext *result);
 
-extern "C"
-AIUResult
-AIUDestroyContext(AIUContext);
+extern "C" AIUResultCode AIUDestroyContext(AIUContext);
 
 /******************************************************************************/
 /*  PROBLEM SPEC                                                              */
 /******************************************************************************/
 
-extern "C"
-AIUResult
-AIUCreateFunc(AIUContext, const char *name, AIUFunc *result);
+extern "C" AIUResultCode AIUCreateModel(AIUContext, const char *name,
+                                        AIUModel *result);
 
-extern "C"
-AIUResult
-AIUDestroyFunc(AIUFunc);
+extern "C" AIUResultCode AIUDestroyModel(AIUModel);
 
 /* 1. Generator Spec */
-extern "C"
-AIUResult
-AIUGenerateKernel(AIUContext, const char *options, AIUFunc *result);
-/* 
-extern "C" AIUResult AIUGenerateKernel(AIUContext, AIUOpType optype, ..., AIUFunc *result);
+extern "C" AIUResultCode AIUGenerateModel(AIUContext, const char *options,
+                                          AIUModel *result);
+/*
+extern "C" AIUResultCode AIUGenerateKernel(AIUContext, AIUOpType optype, ...,
+AIUModel *result);
 */
 
 /* 2. Builder Spec */
@@ -64,20 +55,16 @@ struct _AIUOperation;
 typedef _AIUOperation *AIUOperation;
 
 /*  - types */
-extern "C"
-AIUResult
-AIUMakeTensorType(AIUContext, int dims[], AIUType elemType, AIUType *result);
+extern "C" AIUResultCode AIUMakeTensorType(AIUContext, int dims[],
+                                           AIUType elemType, AIUType *result);
 
 /*  - kernel func */
-extern "C"
-AIUResult
-AIUAddFunctionParam(AIUContext, AIUFunc func, AIUType type, AIUValue *result);
-
+extern "C" AIUResultCode AIUAddParameter(AIUContext, AIUModel func,
+                                         AIUType type, AIUValue *result);
 
 /* 3. Clone Spec */
-extern "C"
-AIUResult
-AIUCloneFunc(AIUContext, MlirOperation kernel, AIUFunc *result);
+extern "C" AIUResultCode AIUCloneModel(AIUContext, MlirOperation kernel,
+                                       AIUModel *result);
 
 /******************************************************************************/
 /*  SUBMIT REQUEST, RECEIVE SOLUTION                                          */
@@ -89,15 +76,13 @@ typedef _AIURequest *AIURequest;
 struct _AIUSolution;
 typedef _AIUSolution *AIUSolution;
 
-extern "C"
-AIUResult
-AIUSubmitFunc(AIUContext, AIUFunc kernel, AIUAction action, AIURequest *result);
+extern "C" AIUResultCode
+AIUSendModel(AIUModel kernel, AIURequestCode request_code, AIURequest *result);
 
 // with provider?
 
-extern "C"
-AIUResult
-AIUReceiveSolution(AIUContext, AIUFunc kernel, AIUSolution *result);
+extern "C" AIUResultCode AIURecvSolution(AIURequest request,
+                                         AIUSolution *result);
 
 /******************************************************************************/
 /*  SOLUTION SPEC                                                             */
@@ -107,9 +92,8 @@ struct _AIUBinary;
 typedef _AIUBinary *AIUBinary;
 
 /* -- Generated kernels and call graph */
-extern "C"
-AIUResult
-AIUGetObject(AIUSolution solution, AIUFunc kernel, AIUBinary *result);
+extern "C" AIUResultCode AIUGetObject(AIUSolution solution, AIUModel kernel,
+                                      AIUBinary *result);
 /*   - EGraph */
 /*   - Binary(s) */
 

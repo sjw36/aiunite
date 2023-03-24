@@ -51,17 +51,21 @@ int main(int argc, char **argv) {
   AIUContext ctx;
   AIUCreateContext(&ctx);
 
-  AIUFunc func;
+  AIUModel func;
   if (module) {
-    module.walk([&](mlir::func::FuncOp f) {
-        AIUCloneFunc(ctx, wrap(&*f), &func);
-      });
+    module.walk(
+        [&](mlir::func::FuncOp f) { AIUCloneModel(ctx, wrap(&*f), &func); });
   } else {
-    AIUCreateFunc(ctx, "foo", &func);
+    AIUCreateModel(ctx, "foo", &func);
   }
 
   AIURequest request;
-  AIUSubmitFunc(ctx, func, 0, &request);
+  AIUSendModel(func, AIU_REQUEST_GET, &request);
+
+  // do something else...
+
+  AIUSolution solution;
+  AIURecvSolution(request, &solution);
 
   return 0;
 }

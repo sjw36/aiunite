@@ -15,8 +15,7 @@
 /*  REGISTRY MGMT                                                             */
 /******************************************************************************/
 
-extern "C"
-AIUResult AIUReadRegistry(const char *filename) {
+extern "C" AIUResultCode AIUReadRegistry(const char *filename) {
   return AIU_FAILURE;
 }
 
@@ -46,18 +45,13 @@ struct _AIUContext {
   }
 };
 
-
-extern "C"
-AIUResult
-AIUCreateContext(AIUContext *result) {
+extern "C" AIUResultCode AIUCreateContext(AIUContext *result) {
   assert(result != nullptr);
   *result = new _AIUContext;
   return AIU_SUCCESS;
 }
 
-extern "C"
-AIUResult
-AIUDestroyContext(AIUContext context) {
+extern "C" AIUResultCode AIUDestroyContext(AIUContext context) {
   delete context;
   return AIU_SUCCESS;
 }
@@ -66,15 +60,15 @@ AIUDestroyContext(AIUContext context) {
 /*  PROBLEM SPEC                                                              */
 /******************************************************************************/
 
-struct _AIUFunc {
+struct _AIUModel {
   mlir::ModuleOp _module;
   mlir::func::FuncOp _d;
 };
 
-extern "C"
-AIUResult
-AIUCreateFunc(AIUContext context, const char *name, AIUFunc *result) {
-  auto mod = mlir::ModuleOp::create(context->_loc, name);
+extern "C" AIUResultCode AIUCreateModel(AIUContext context, const char *name,
+                                        AIUModel *result) {
+  std::string modname = "module_";
+  auto mod = mlir::ModuleOp::create(context->_loc, modname + name);
   mlir::OpBuilder b(mod);
 
   auto funcType = b.getFunctionType({}, {});
@@ -85,25 +79,26 @@ AIUCreateFunc(AIUContext context, const char *name, AIUFunc *result) {
 
   b.create<mlir::func::ReturnOp>(context->_loc);
 
-  *result = new _AIUFunc{mod, func};
+  mod.push_back(func);
+
+  *result = new _AIUModel{mod, func};
   return AIU_SUCCESS;
 }
 
-extern "C"
-AIUResult
-AIUDestroyFunc(AIUFunc func) {
+extern "C" AIUResultCode AIUDestroyModel(AIUModel func) {
   delete func;
   return AIU_SUCCESS;
 }
 
 /* 1. Generator Spec */
-extern "C"
-AIUResult AIUGenerateKernel(AIUContext, const char *options, AIUFunc *result) {
+extern "C" AIUResultCode AIUGenerateKernel(AIUContext, const char *options,
+                                           AIUModel *result) {
   return AIU_FAILURE;
 }
 
-/* 
-extern "C" AIUResult AIUGenerateKernel(AIUContext, AIUOpType optype, ..., AIUFunc *result);
+/*
+extern "C" AIUResultCode AIUGenerateKernel(AIUContext, AIUOpType optype, ...,
+AIUModel *result);
 */
 
 /* 2. Builder Spec */
@@ -120,38 +115,38 @@ struct _AIUOperation {
 };
 
 /*  - types */
-extern "C"
-AIUResult AIUMakeTensorType(AIUContext, int dims[], AIUType elemType, AIUType *result) {
+extern "C" AIUResultCode AIUMakeTensorType(AIUContext, int dims[],
+                                           AIUType elemType, AIUType *result) {
   return AIU_FAILURE;
 }
 
 /*  - kernel func */
-extern "C"
-AIUResult AIUAddFunctionParam(AIUContext, AIUFunc func, AIUType type, AIUValue *result) {
+extern "C" AIUResultCode AIUAddParameter(AIUContext, AIUModel func,
+                                         AIUType type, AIUValue *result) {
   return AIU_FAILURE;
 }
 
-
 /* 3. Clone Spec */
-extern "C"
-AIUResult AIUCloneFunc(AIUContext context, MlirOperation func, AIUFunc *result) {
-  auto mod = mlir::ModuleOp::create(context->_loc, "foo");
+extern "C" AIUResultCode AIUCloneModel(AIUContext context, MlirOperation c_func,
+                                       AIUModel *result) {
+  auto func = llvm::dyn_cast<mlir::func::FuncOp>(*unwrap(c_func));
 
-  auto kernel = llvm::dyn_cast<mlir::func::FuncOp>(*unwrap(func));
-  mod.push_back(kernel.clone());
+  std::string modname = "module_";
+  auto mod =
+      mlir::ModuleOp::create(context->_loc, (modname + func.getName()).str());
+
+  mod.push_back(func.clone());
 
   // strip out locations
-  
-  *result = new _AIUFunc{mod, kernel};
+  // make large constants opaque
+
+  *result = new _AIUModel{mod, func};
   return AIU_SUCCESS;
 }
 
 /******************************************************************************/
 /*  SUBMIT REQUEST, RECEIVE SOLUTION                                          */
 /******************************************************************************/
-
-struct _AIUBinary {
-};
 
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
@@ -179,52 +174,71 @@ struct _AIURequest {
   beast::tcp_stream stream;
   beast::flat_buffer buffer;
 
-  _AIURequest(const char *host, const char *port)
-    : ioc(), resolver(ioc), stream(ioc) {
+  _AIURequest() : ioc(), resolver(ioc), stream(ioc) {}
+
+  void init(const char *host, const char *port) {
     // Look up the domain name
     auto const results = resolver.resolve(host, port);
     // handle error
     // Make the connection on the IP address we get from a lookup
     stream.connect(results);
   }
-
 };
 
-
-struct _AIUCBData {
-  mlir::ModuleOp _module;
-  bool _done;
-};
-
-static const char *s_url = "http://0.0.0.0:8000";
-static const uint64_t s_timeout_ms = 1500;  // Connect timeout in milliseconds
-
-extern "C"
-AIUResult
-AIUSubmitFunc(AIUContext context, AIUFunc kernel, AIUAction action, AIURequest *result) {
-  kernel->_module.dump();
+extern "C" AIUResultCode
+AIUSendModel(AIUModel kernel, AIURequestCode request_code, AIURequest *result) {
 
   const char *host = "0.0.0.0";
   const char *port = "8000";
   const char *target = "/foo.html";
   int version = 10;
 
+  _AIURequest *request = new _AIURequest;
   try {
-    _AIURequest *request = new _AIURequest(host, port);
-    *result = request;
+
+    request->init(host, port);
 
     std::string post_data;
     llvm::raw_string_ostream os(post_data);
     kernel->_module.print(os);
 
+    std::cout << "Model: " << post_data << std::endl;
+
     // Set up an HTTP GET request message
-    http::request<http::string_body> req{http::verb::head, target, version, post_data};
+    http::request<http::string_body> req{http::verb::get, target, version};
     req.set(http::field::host, host);
-    req.set(http::field::user_agent, BOOST_BEAST_VERSION_STRING); // TOSA v1.0
+    req.set(http::field::user_agent, AIUNITE_VERSION_STR); // TOSA v1.0
+    req.set(http::field::content_type, "text/tosa");
+    req.set(http::field::content_version, "1.0");
+    req.set(http::field::protocol_request, AIUGetRequestString(request_code));
+    req.keep_alive();
+    req.content_length(post_data.size());
+    req.body() = post_data;
 
     // Send the HTTP request to the remote host
     http::write(request->stream, req);
 
+  } catch (std::exception const &e) {
+    std::cerr << "Error: " << e.what() << std::endl;
+    delete request;
+    return AIU_FAILURE;
+  }
+
+  if (result)
+    *result = request;
+
+  return AIU_SUCCESS;
+}
+// with provider?
+
+struct _AIUSolution {};
+
+extern "C" AIUResultCode AIURecvSolution(AIURequest request,
+                                         AIUSolution *result) {
+
+  AIUSolution solution = new _AIUSolution;
+
+  try {
     // This buffer is used for reading and must be persisted
 
     // Declare a container to hold the response
@@ -239,29 +253,25 @@ AIUSubmitFunc(AIUContext context, AIUFunc kernel, AIUAction action, AIURequest *
     // Gracefully close the socket
     beast::error_code ec;
     request->stream.socket().shutdown(tcp::socket::shutdown_both, ec);
-    
-  } catch(std::exception const& e) {
+
+  } catch (std::exception const &e) {
     std::cerr << "Error: " << e.what() << std::endl;
+    delete solution;
     return AIU_FAILURE;
   }
 
+  if (result)
+    *result = solution;
   return AIU_SUCCESS;
 }
-// with provider?
-
-extern "C"
-AIUResult AIUReceiveSolution(AIUContext, AIUFunc kernel, AIUSolution *result) {
-  return AIU_FAILURE;
-}
-  
 
 /******************************************************************************/
 /*  SOLUTION SPEC                                                             */
 /******************************************************************************/
 
 /* -- Generated kernels and call graph */
-extern "C"
-AIUResult AIUGetObject(AIUSolution solution, AIUFunc kernel, AIUBinary *result) {
+extern "C" AIUResultCode AIUGetObject(AIUSolution solution, AIUModel kernel,
+                                      AIUBinary *result) {
   return AIU_FAILURE;
 }
 /*   - EGraph */
