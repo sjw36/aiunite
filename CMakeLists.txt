@@ -30,17 +30,10 @@ set(LLVM_ENABLE_TERMINFO OFF CACHE BOOL "")
 set(LLVM_TARGETS_TO_BUILD "" CACHE STRING "")
 
 # Pointers to: 1) external LLVM bins/libs, and 2) AIUnite bins/libs
-set(LLVM_MAIN_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/llvm-project/llvm" CACHE PATH "Path to LLVM sources")
-set(LLVM_EXTERNAL_BIN_DIR "${CMAKE_CURRENT_BINARY_DIR}/external/llvm-project/llvm/bin" CACHE PATH "")
-set(LLVM_EXTERNAL_LIB_DIR "${CMAKE_CURRENT_BINARY_DIR}/external/llvm-project/llvm/lib" CACHE PATH "")
 set(AIUNITE_BIN_DIR "${CMAKE_CURRENT_BINARY_DIR}/bin" CACHE PATH "")
 set(AIUNITE_LIB_DIR "${CMAKE_CURRENT_BINARY_DIR}/lib" CACHE PATH "")
-message(STATUS "LLVM_EXTERNAL_BIN_DIR: ${LLVM_EXTERNAL_BIN_DIR}")
 message(STATUS "AIUNITE_BIN_DIR: ${AIUNITE_BIN_DIR}")
-
-# Update the build-tree RPATH
-set(CMAKE_BUILD_RPATH "${AIUNITE_LIB_DIR};${LLVM_EXTERNAL_LIB_DIR}")
-message(STATUS "CMAKE_BUILD_RPATH: ${CMAKE_BUILD_RPATH}")
+message(STATUS "AIUNITE_LIB_DIR: ${AIUNITE_LIB_DIR}")
 
 # Library type and linkage settings
 if( NOT DEFINED BUILD_FAT_LIBAIUNITE )
@@ -63,37 +56,11 @@ endif()
 # Set up the build for the LLVM/MLIR git-submodule
 include(cmake/llvm-project.cmake)
 
-message(STATUS "LLVM_INCLUDE_DIRS: ${LLVM_INCLUDE_DIRS}")
-message(STATUS "MLIR_INCLUDE_DIRS: ${MLIR_INCLUDE_DIRS}")
-message(STATUS "LLVM_BUILD_LIBRARY_DIR: ${LLVM_BUILD_LIBRARY_DIR}")
-message(STATUS "LLVM_DEFINITIONS: ${LLVM_DEFINITIONS}")
+# Update the build-tree RPATH
+set(CMAKE_BUILD_RPATH "${AIUNITE_LIB_DIR};${LLVM_EXTERNAL_LIB_DIR}")
+message(STATUS "CMAKE_BUILD_RPATH: ${CMAKE_BUILD_RPATH}")
 
-set(LLVM_RUNTIME_OUTPUT_INTDIR ${CMAKE_BINARY_DIR}/bin)
-set(LLVM_LIBRARY_OUTPUT_INTDIR ${CMAKE_BINARY_DIR}/lib)
-set(MLIR_BINARY_DIR ${CMAKE_BINARY_DIR})
-set(MLIR_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
-
-list(APPEND CMAKE_MODULE_PATH "${MLIR_CMAKE_DIR}")
-list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
-include(TableGen)
-include(AddLLVM)
-include(AddMLIR)
-include(HandleLLVMOptions)
-
-# Forbid implicit function declaration: this may lead to subtle bugs and we
-# don't have a reason to support this.
-check_c_compiler_flag("-Werror=implicit-function-declaration" C_SUPPORTS_WERROR_IMPLICIT_FUNCTION_DECLARATION)
-append_if(C_SUPPORTS_WERROR_IMPLICIT_FUNCTION_DECLARATION "-Werror=implicit-function-declaration" CMAKE_C_FLAGS)
-
-# Refer to https://reviews.llvm.org/D122088
-set(CMAKE_INCLUDE_CURRENT_DIR ON)
-
-include_directories(${LLVM_INCLUDE_DIRS})
-include_directories(${MLIR_INCLUDE_DIRS})
 include_directories(${PROJECT_SOURCE_DIR}/include)
-#include_directories(${PROJECT_BINARY_DIR}/external/llvm-project/llvm/tools/mlir/include)
-link_directories(${LLVM_BUILD_LIBRARY_DIR})
-add_definitions(${LLVM_DEFINITIONS})
 
 # Set up the build for the AIUnite dialects
 add_subdirectory(src)
