@@ -954,7 +954,8 @@ extern "C" AIUResultCode AIUCreateService(int port, AIUCallBack callback) {
   // load_server_certificate(ctx);
 
   // Create and launch a listening port
-  std::make_shared<listener>(ioc, ctx, tcp::endpoint{address, port}, doc_root,
+  unsigned short port_s = static_cast<unsigned short>(port);
+  std::make_shared<listener>(ioc, ctx, tcp::endpoint{address, port_s}, doc_root,
                              callback)
       ->run();
 
@@ -995,4 +996,5 @@ extern "C" AIURequestCode AIUGetRequestCode(AIURequest request) {
 extern "C" AIUResultCode AIUSetModule(AIUSolution solution, MlirModule module) {
   assert(solution);
   solution->setResult(0, unwrap(module));
+  return AIU_SUCCESS;
 }
