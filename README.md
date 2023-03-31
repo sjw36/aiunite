@@ -3,7 +3,7 @@
 ## Dependencies
 
 - libboost-all-dev v1.71
-- ssl
+- libssl-dev
 
 ## Configuration
 
