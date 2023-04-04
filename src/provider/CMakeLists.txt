@@ -8,6 +8,7 @@ PARTIAL_SOURCES_INTENDED
   service.cpp
 
   LINK_LIBS
+  AIUniteCommon
   MLIRCAPIIR
   MLIRFuncDialect
   MLIRTosaDialect

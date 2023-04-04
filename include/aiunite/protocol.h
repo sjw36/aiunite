@@ -8,6 +8,10 @@
 
 #include <cstring>
 
+#ifndef NDEBUG
+#include <iostream>
+#endif
+
 #define AIU_STRINGIFY2(X) #X
 #define AIU_STRINGIFY(X) AIU_STRINGIFY2(X)
 
@@ -17,7 +21,14 @@
 /* RESULT CODE */
 #define AIU_SUCCESS 0
 #define AIU_FAILURE 1
+#define AIU_INVALID_OBJECT 2
+#define AIU_INVALID_RESULT_PTR 3
 #define AIU_FAILURE_MASK -1
+
+extern "C" int returnResult(const char *resultCode, const char *file_name, int line_num);
+
+#define AIU_CHECK_SUCCESS(X) if (X == AIU_SUCCESS) ; \
+  else return returnResult(# X, __FILE__, __LINE__)
 
 typedef int AIUResultCode;
 
@@ -33,33 +44,9 @@ typedef int AIUActionCode;
 
 typedef int AIURequestCode;
 
-#define AIU_REQUEST_TEST_STRING(VAL, CODE)                                     \
-  if (!strcmp(VAL, #CODE))                                                     \
-  return AIU_REQUEST_##CODE
+AIURequestCode AIUGetRequestCode(const char *code);
 
-AIURequestCode AIUGetRequestCode(const char *code) {
-  if (code && *code) {
-    AIU_REQUEST_TEST_STRING(code, GET);
-    AIU_REQUEST_TEST_STRING(code, GET_NOW);
-    AIU_REQUEST_TEST_STRING(code, PARTITION);
-    AIU_REQUEST_TEST_STRING(code, TUNE);
-  }
-  return AIU_REQUEST_BAD;
-}
-
-#define AIU_REQUEST_TEST_CODE(CODE)                                            \
-  case AIU_REQUEST_##CODE:                                                     \
-    return #CODE
-
-const char *AIUGetRequestString(AIURequestCode code) {
-  switch (code) {
-    AIU_REQUEST_TEST_CODE(GET);
-    AIU_REQUEST_TEST_CODE(GET_NOW);
-    AIU_REQUEST_TEST_CODE(PARTITION);
-    AIU_REQUEST_TEST_CODE(TUNE);
-  }
-  return "BAD";
-}
+const char *AIUGetRequestString(AIURequestCode code);
 
 /* RESPONSE CODES */
 #define AIU_RESPONSE_SUCCESS 0
