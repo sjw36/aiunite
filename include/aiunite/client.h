@@ -42,11 +42,6 @@ typedef _AIUType *AIUType;
 extern "C" AIUResultCode
 AIUCreateModel(AIUContext, const char *name, AIUType returnType, AIUModel *result);
 
-/*
-extern "C" AIUResultCode
-AIUCreateModel(AIUContext, const char *name, AIUType *returnTypes, AIUModel *result);
-*/
-
 extern "C" AIUResultCode
 AIUDestroyModel(AIUModel);
 
@@ -56,8 +51,8 @@ AIUPrintModel(AIUModel model_, const char **result_);
 /* 1. Builder Spec */
 struct _AIUValue;
 typedef _AIUValue *AIUValue;
-struct _AIUAttribute;
-typedef _AIUAttribute *AIUAttribute;
+struct _AIUAttr;
+typedef _AIUAttr *AIUAttr;
 struct _AIUOperation;
 typedef _AIUOperation *AIUOperation;
 
@@ -146,7 +141,7 @@ enum AIUOperationEnum {
     AIU_TRANSPOSE,
 };
 
-enum AIUAttributeEnum {
+enum AIUAttrEnum {
     AIU_AXIS_ATTR, /* ::mlir::IntegerAttr */
     AIU_BORDER_ATTR, /* ::mlir::DenseI64ArrayAttr */
     AIU_CONFIG_ATTR, /* ::mlir::StringAttr */
@@ -205,8 +200,13 @@ AIUAddParameter(AIUModel func, AIUType type, AIUValue *result);
 
 /*  - make attribute */
 extern "C" AIUResultCode
-AIUMakeAttribute(AIUModel func, AIUAttributeEnum type, void *value,
-                 AIUAttribute *result);
+AIUMakeAttr(AIUModel func, AIUAttrEnum type, void *value,
+            AIUAttr *result);
+
+/*  - make attribute */
+extern "C" AIUResultCode
+AIUMakeArrayAttr(AIUModel func, AIUAttrEnum type, int64_t valCnt, void *value,
+                 AIUAttr *result);
 
 /*  - add constant */
 extern "C" AIUResultCode
@@ -228,7 +228,7 @@ AIUAddOperation(AIUModel func, AIUOperationEnum type,
 extern "C" AIUResultCode
 AIUAddOperationWithAttrs(AIUModel func, AIUOperationEnum type,
                          int64_t paramCnt, AIUValue *params,
-                         int64_t attrCnt, AIUAttribute *attrs,
+                         int64_t attrCnt, AIUAttr *attrs,
                          AIUType resType, AIUValue *result);
 
 /*  - set return value */
@@ -269,14 +269,15 @@ typedef _AIUBinary *AIUBinary;
 
 // with provider?
 
-extern "C" AIUResultCode AIURecvSolution(AIURequest request,
-                                         AIUSolution *result);
+extern "C" AIUResultCode
+AIURecvSolution(AIURequest request, AIUSolution *result);
 
-extern "C" AIUResponseCode AIUGetResponseCode(AIUSolution result);
+extern "C" AIUResponseCode
+AIUGetResponseCode(AIUSolution result);
 
 /* -- Generated kernels and call graph */
-extern "C" AIUResultCode AIUGetObject(AIUSolution solution, AIUModel kernel,
-                                      AIUBinary *result);
+extern "C" AIUResultCode
+AIUGetObject(AIUSolution solution, AIUModel kernel, AIUBinary *result);
 /*   - EGraph */
 /*   - Binary(s) */
 

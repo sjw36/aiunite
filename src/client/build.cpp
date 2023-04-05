@@ -5,22 +5,10 @@
 /******************************************************************************/
 
 #include <mlir/CAPI/IR.h>
-#include <mlir/Dialect/Func/IR/FuncOps.h>
-#include <mlir/Dialect/Tosa/IR/TosaOps.h>
-#include <mlir/IR/BuiltinOps.h>
 
 #include <aiunite/client.h>
-
-#include <list>
-
-#define AIU_CHECK_OBJECT(X) if (X != nullptr) ; \
-  else return AIU_INVALID_OBJECT
-#define AIU_GET_OBJECT(X) AIU_CHECK_OBJECT(X ## _);    \
-  auto X = X ## _->_d
-
-#define AIU_CHECK_RESULT(X) if (X != nullptr || *X != nullptr) ; \
-  else return AIU_INVALID_RESULT_PTR
-
+#include <aiunite/internal/context.h>
+#include <aiunite/internal/support.h>
 
 /******************************************************************************/
 /*  REGISTRY MGMT                                                             */
@@ -33,49 +21,17 @@ extern "C" AIUResultCode AIUReadRegistry(const char *filename) {
 /******************************************************************************/
 /*  CONTEXT MGMT                                                              */
 /******************************************************************************/
-struct _AIUType {
-  mlir::Type _d;
-  _AIUType(mlir::Type t) : _d(t) {}
-};
-
-struct _AIUContext {
-  mlir::DialectRegistry _reg;
-  mlir::MLIRContext *_d;
-  mlir::Location _loc;
-  std::list<_AIUType> _types;
-
-  mlir::DialectRegistry &getRegistry() {
-    _reg.insert<mlir::func::FuncDialect>();
-    return _reg;
-  }
-
-  _AIUContext() :
-    _d(new mlir::MLIRContext(getRegistry())),
-    _loc(mlir::UnknownLoc::get(_d))
-  {
-    _d->loadDialect<mlir::func::FuncDialect,
-                    mlir::tosa::TosaDialect>();
-  }
-  ~_AIUContext() {
-    delete _d;
-  }
-
-  AIUType getNextType(mlir::Type t) {
-    _types.emplace_back(t);
-    return &_types.back();
-  }
-};
-
-extern "C" AIUResultCode AIUCreateContext(AIUContext *result) {
-  AIU_CHECK_RESULT(result);  
-
-  *result = new _AIUContext;
+extern "C" AIUResultCode
+AIUCreateContext(AIUContext *result_) {
+  AIU_CHECK_RESULT(result_);  
+  *result_ = new _AIUContext;
   return AIU_SUCCESS;
 }
 
-extern "C" AIUResultCode AIUDestroyContext(AIUContext context) {
-  AIU_CHECK_OBJECT(context);  
-  delete context;
+extern "C" AIUResultCode
+AIUDestroyContext(AIUContext context_) {
+  AIU_CHECK_OBJECT(context_);  
+  delete context_;
   return AIU_SUCCESS;
 }
 
@@ -83,111 +39,29 @@ extern "C" AIUResultCode AIUDestroyContext(AIUContext context) {
 /*  PROBLEM SPEC                                                              */
 /******************************************************************************/
 
-struct _AIUValue {
-  mlir::Value _d;
-  _AIUValue(mlir::Value v) : _d(v) {}
-};
-struct _AIUAttribute {
-  mlir::NamedAttribute _d;
-  _AIUAttribute(mlir::NamedAttribute a) : _d(a) {}
-};
-
-struct _AIUModel {
-  mlir::ModuleOp _module;
-  mlir::func::FuncOp _d;
-  int64_t _opCnt = 0;
-  mlir::StringAttr _file;
-  std::list<_AIUAttribute> _attrs;
-  std::list<_AIUValue> _values;
-  std::string _model_print;
-
-  _AIUModel(mlir::MLIRContext *ctx, const char *name_, AIUType returnType_)
-    : _opCnt(0) {
-    mlir::OpBuilder b(ctx);
-    auto loc = b.getUnknownLoc();
-    
-    std::string modname = "module_";
-    _module = mlir::ModuleOp::create(loc, modname + name_);
-
-    _file = b.getStringAttr(name_);
-    
-    mlir::Type retType = b.getNoneType();
-    if (returnType_ != nullptr) {
-      retType = returnType_->_d;
-    }
-
-    auto funcType = b.getFunctionType({}, {retType});
-    _d = b.create<mlir::func::FuncOp>(loc, name_, funcType);
-    _d->setAttr("kernel", b.getUnitAttr());
-
-    /* mlir::Block *block = */ _d.addEntryBlock();
-  
-    _module.push_back(_d);
-  }
-
-  _AIUModel(mlir::ModuleOp mod, mlir::func::FuncOp func)
-    : _module(mod), _d(func) {
-    // TODO: annotate ops with loc
-  }
-
-  AIUValue getNextValue(mlir::Value v) {
-    //_model_print.clear();
-    _values.emplace_back(v);
-    return &_values.back();
-  }
-
-  AIUAttribute getNextAttr(mlir::NamedAttribute a) {
-    //_model_print.clear();
-    _attrs.emplace_back(a);
-    return &_attrs.back();
-  }
-
-  mlir::Location getNextLoc() {
-    //_model_print.clear();
-    return mlir::FileLineColLoc::get(_file, _opCnt++, 0);
-  }
-  mlir::OpBuilder getBuilder() {
-    //_model_print.clear();
-    mlir::Block *block = &_d.getBody().back();
-    return mlir::OpBuilder::atBlockEnd(block);
-  }
-
-  const char *print() {
-    if (_model_print.empty()) {
-      llvm::raw_string_ostream os(_model_print);
-      mlir::OpPrintingFlags flags;
-      _module.print(os, flags.enableDebugInfo().assumeVerified());
-    }
-    return _model_print.c_str();
-  }
-};
-
-extern "C" AIUResultCode AIUPrintModel(AIUModel model_, const char **result_) {
+extern "C" AIUResultCode
+AIUPrintModel(AIUModel model_, const char **result_) {
   AIU_CHECK_OBJECT(model_);
+  AIU_CHECK_RESULT(result_);
   *result_ = model_->print();
   return AIU_SUCCESS;
 }
 
-extern "C" AIUResultCode AIUCreateModel(AIUContext context_, const char *name_,
-                                        AIUType returnType_, AIUModel *result_) {
+extern "C" AIUResultCode
+AIUCreateModel(AIUContext context_, const char *name_,
+               AIUType returnType_, AIUModel *result_) {
   AIU_CHECK_OBJECT(context_);
   AIU_CHECK_OBJECT(name_);
   AIU_CHECK_RESULT(result_);
 
   *result_ = new _AIUModel(context_->_d, name_, returnType_);
-  
   return AIU_SUCCESS;
 }
 
-extern "C" AIUResultCode AIUDestroyModel(AIUModel func) {
-  delete func;
+extern "C" AIUResultCode
+AIUDestroyModel(AIUModel func_) {
+  delete func_;
   return AIU_SUCCESS;
-}
-
-/* 1. Generator Spec */
-extern "C" AIUResultCode AIUGenerateKernel(AIUContext, const char *options,
-                                           AIUModel *result) {
-  return AIU_FAILURE;
 }
 
 /*
@@ -284,7 +158,7 @@ AIUAddParameter(AIUModel func_, AIUType paramType_, AIUValue *result_) {
   return AIU_SUCCESS;
 }
 
-const char *AIUGetAttributeName(AIUAttributeEnum attr) {
+const char *AIUGetAttrName(AIUAttrEnum attr) {
   switch (attr) {
   case AIU_AXIS_ATTR: return "axis";
   case AIU_BORDER_ATTR: return "border";
@@ -330,12 +204,12 @@ const char *AIUGetAttributeName(AIUAttributeEnum attr) {
 
 /*  - make attribute */
 extern "C" AIUResultCode
-AIUMakeAttribute(AIUModel func_, AIUAttributeEnum type_, void *value_,
-                 AIUAttribute *result_) {
+AIUMakeAttr(AIUModel func_, AIUAttrEnum type_, void *value_,
+            AIUAttr *result_) {
   AIU_CHECK_OBJECT(func_);
   AIU_CHECK_RESULT(result_);
 
-  const char *attr_name = AIUGetAttributeName(type_);
+  const char *attr_name = AIUGetAttrName(type_);
   AIU_CHECK_OBJECT(attr_name);
 
   auto b = func_->getBuilder();
@@ -351,8 +225,7 @@ AIUMakeAttribute(AIUModel func_, AIUAttributeEnum type_, void *value_,
     break;
   case AIU_MULTIPLIER_ATTR:
   case AIU_SHIFT_ARRAY_ATTR:
-    //attr = ::mlir::DenseI32ArrayAttr;
-    break;
+    return AIU_FAILURE; // array attr
   case AIU_BORDER_ATTR:
   case AIU_DILATION_ATTR:
   case AIU_KERNEL_ATTR:
@@ -366,8 +239,7 @@ AIUMakeAttribute(AIUModel func_, AIUAttributeEnum type_, void *value_,
   case AIU_SIZE_ATTR:
   case AIU_START_ATTR:
   case AIU_STRIDE_ATTR:
-    //attr = ::mlir::DenseI64ArrayAttr;
-    break;
+    return AIU_FAILURE; // array attr
   case AIU_VALUE_ATTR:
     //attr = ::mlir::ElementsAttr;
     assert(0);
@@ -412,6 +284,56 @@ AIUMakeAttribute(AIUModel func_, AIUAttributeEnum type_, void *value_,
   return AIU_FAILURE;
 }
 
+template <typename T>
+static llvm::ArrayRef<T> getARef(void *vals_, int64_t cnt_) {
+  return llvm::ArrayRef<T>(reinterpret_cast<T*>(vals_), cnt_);
+}
+
+/*  - make attribute */
+extern "C" AIUResultCode
+AIUMakeArrayAttr(AIUModel func_, AIUAttrEnum type_, int64_t valCnt_, void *value_,
+                 AIUAttr *result_) {
+  AIU_CHECK_OBJECT(func_);
+  AIU_CHECK_RESULT(result_);
+
+  const char *attr_name = AIUGetAttrName(type_);
+  AIU_CHECK_OBJECT(attr_name);
+
+  auto b = func_->getBuilder();
+
+  mlir::Attribute attr;
+  switch (type_) {
+  case AIU_MULTIPLIER_ATTR:
+  case AIU_SHIFT_ARRAY_ATTR:
+    attr = b.getDenseI32ArrayAttr(getARef<int32_t>(value_, valCnt_));
+    break;
+  case AIU_BORDER_ATTR:
+  case AIU_DILATION_ATTR:
+  case AIU_KERNEL_ATTR:
+  case AIU_MULTIPLES_ATTR:
+  case AIU_NEW_SHAPE_ATTR:
+  case AIU_OFFSET_ATTR:
+  case AIU_OUT_PAD_ATTR:
+  case AIU_OUT_SHAPE_ATTR:
+  case AIU_PAD_ATTR:
+  case AIU_SCALE_ATTR:
+  case AIU_SIZE_ATTR:
+  case AIU_START_ATTR:
+  case AIU_STRIDE_ATTR:
+    attr = b.getDenseI64ArrayAttr(getARef<int64_t>(value_, valCnt_));
+    break;
+  default:
+    return AIU_FAILURE; // not an array attr
+  }
+
+  if (attr) {
+    *result_ = func_->getNextAttr(b.getNamedAttr(attr_name, attr));
+    return AIU_SUCCESS;
+  }
+  
+  return AIU_FAILURE;
+}
+
 /*  - add constant */
 extern "C" AIUResultCode
 AIUAddConstant(AIUModel func_, AIUType resType_, void *value_,
@@ -428,17 +350,14 @@ AIUAddConstant(AIUModel func_, AIUType resType_, void *value_,
 
   mlir::Attribute attr;
   if (elemType.isF32()) {
-    llvm::ArrayRef<float> vals(reinterpret_cast<float*>(value_),
-                                  resShapeType.getNumElements());
-    attr = mlir::DenseFPElementsAttr::get(resType, vals);
+    attr = mlir::DenseFPElementsAttr::get(resType,
+           getARef<float>(value_, resShapeType.getNumElements()));
   } else if (elemType.isInteger(64)) {
-    llvm::ArrayRef<int64_t> vals(reinterpret_cast<int64_t*>(value_),
-                                  resShapeType.getNumElements());
-    attr = mlir::DenseIntElementsAttr::get(resType, vals);
+    attr = mlir::DenseIntElementsAttr::get(resType,
+           getARef<int64_t>(value_, resShapeType.getNumElements()));
   } else if (elemType.isInteger(32)) {
-    llvm::ArrayRef<int32_t> vals(reinterpret_cast<int32_t*>(value_),
-                                  resShapeType.getNumElements());
-    attr = mlir::DenseIntElementsAttr::get(resType, vals);
+    attr = mlir::DenseIntElementsAttr::get(resType,
+           getARef<int32_t>(value_, resShapeType.getNumElements()));
   } else {
     return AIU_FAILURE;
   }
@@ -466,14 +385,14 @@ AIUAddConstantSplat(AIUModel func_, AIUType resType_, void *value_,
 
   mlir::Attribute attr;
   if (elemType.isF32()) {
-    llvm::ArrayRef<float> vals(reinterpret_cast<float*>(value_), 1);
-    attr = mlir::DenseFPElementsAttr::get(resType, vals);
+    attr = mlir::DenseFPElementsAttr::get(resType,
+           getARef<float>(value_, 1));
   } else if (elemType.isInteger(64)) {
-    llvm::ArrayRef<int64_t> vals(reinterpret_cast<int64_t*>(value_), 1);
-    attr = mlir::DenseIntElementsAttr::get(resType, vals);
+    attr = mlir::DenseIntElementsAttr::get(resType,
+           getARef<int64_t>(value_, 1));
   } else if (elemType.isInteger(32)) {
-    llvm::ArrayRef<int32_t> vals(reinterpret_cast<int32_t*>(value_), 1);
-    attr = mlir::DenseIntElementsAttr::get(resType, vals);
+    attr = mlir::DenseIntElementsAttr::get(resType,
+           getARef<int32_t>(value_, 1));
   } else {
     return AIU_FAILURE;
   }
@@ -523,7 +442,7 @@ AIUAddOperation(AIUModel func_, AIUOperationEnum opType_, int64_t paramCnt_,
 extern "C" AIUResultCode
 AIUAddOperationWithAttrs(AIUModel func_, AIUOperationEnum opType_,
                          int64_t paramCnt_, AIUValue *params_,
-                         int64_t attrCnt_, AIUAttribute *attrs_,
+                         int64_t attrCnt_, AIUAttr *attrs_,
                          AIUType resType_, AIUValue *result_) {
   AIU_CHECK_OBJECT(func_);
   AIU_CHECK_OBJECT(resType_);
@@ -543,14 +462,27 @@ AIUAddOperationWithAttrs(AIUModel func_, AIUOperationEnum opType_,
     AIU_CHECK_OBJECT(params_[i]);
     params.push_back(params_[i]->_d);
   }
+
+  llvm::SmallVector<mlir::NamedAttribute, 4> attrs;
+  for (int64_t i = 0; i < attrCnt_; ++i) {
+    AIU_CHECK_OBJECT(attrs_[i]);
+    attrs.push_back(attrs_[i]->_d);
+  }
+  
   mlir::Value resVal;
 
-#define AIU_2_TOSA(X, Y) case AIU_ ## X: resVal = b.create<mlir::tosa::Y>(loc, resType_->_d, params); break
+#define AIU_2_TOSA_ATTR(X, Y) case AIU_ ## X: {                    \
+    auto op = b.create<mlir::tosa::Y>(loc, resType_->_d, params);  \
+    op->setAttrs(attrs);                                           \
+    resVal = op.getResult();                                      \
+  } \
+  break
   
   switch (opType_) {
-    AIU_2_TOSA(CONV2D, Conv2DOp);
-    default: break;
+  AIU_2_TOSA_ATTR(CONV2D, Conv2DOp);
+  default: return AIU_FAILURE;
   }
+
   *result_ = func_->getNextValue(resVal);
   return AIU_SUCCESS;
 }
@@ -570,7 +502,7 @@ AIUSetReturn(AIUModel func_, AIUValue retVal_) {
 }
 
 
-/* 3. Clone Spec */
+/* 2. Clone Spec */
 extern "C" AIUResultCode AIUCloneModel(AIUContext context_, MlirOperation func_,
                                        AIUModel *result_) {
   AIU_CHECK_OBJECT(context_);
@@ -590,3 +522,10 @@ extern "C" AIUResultCode AIUCloneModel(AIUContext context_, MlirOperation func_,
   *result_ = new _AIUModel(mod, func);
   return AIU_SUCCESS;
 }
+
+/* 3. Generator Spec */
+extern "C" AIUResultCode
+AIUGenerateKernel(AIUContext, const char *options_, AIUModel *result_) {
+  return AIU_FAILURE;
+}
+

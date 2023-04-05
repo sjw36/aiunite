@@ -4,21 +4,12 @@
 /*  AIAPI:  AI Accelerator (Programming) Interface                            */
 /******************************************************************************/
 
-// #include <mlir/CAPI/IR.h>
-// #include <mlir/Dialect/Func/IR/FuncOps.h>
-// #include <mlir/Dialect/Tosa/IR/TosaOps.h>
 #include <mlir/IR/BuiltinOps.h>
+#include <mlir/Parser/Parser.h>
 
 #include <aiunite/client.h>
-
-#define AIU_CHECK_OBJECT(X) if (X != nullptr) ; \
-  else return AIU_INVALID_OBJECT
-#define AIU_GET_OBJECT(X) AIU_CHECK_OBJECT(X ## _);    \
-  auto X = X ## _->_d
-
-#define AIU_CHECK_RESULT(X) if (X != nullptr || *X != nullptr) ; \
-  else return AIU_INVALID_RESULT_PTR
-
+#include <aiunite/internal/context.h>
+#include <aiunite/internal/support.h>
 
 /******************************************************************************/
 /*  SUBMIT REQUEST, RECEIVE SOLUTION                                          */
@@ -41,6 +32,8 @@ namespace net = boost::asio;        // from <boost/asio.hpp>
 using tcp = net::ip::tcp;           // from <boost/asio/ip/tcp.hpp>
 
 struct _AIURequest {
+  AIUModel model;
+  
   // The io_context is required for all I/O
   net::io_context ioc;
 
@@ -49,7 +42,8 @@ struct _AIURequest {
   beast::tcp_stream stream;
   beast::flat_buffer buffer;
 
-  _AIURequest() : ioc(), resolver(ioc), stream(ioc) {}
+  _AIURequest(AIUModel model_)
+    : model(model_), ioc(), resolver(ioc), stream(ioc) {}
 
   void init(const char *host, const char *port) {
     // Look up the domain name
@@ -83,18 +77,18 @@ AIUSendModel(AIUModel kernel, AIURequestCode request_code, AIURequest *result) {
   const char *target = "/foo.html";
   int version = 10;
 
-  _AIURequest *request = new _AIURequest;
+  _AIURequest *request = new _AIURequest(kernel);
   try {
 
     request->init(host, port);
 
     const char *kernel_str;
     AIUPrintModel(kernel, &kernel_str);
-    std::string post_data(kernel_str);
+    std::string data(kernel_str);
 
-    std::string md5sum = getMD5SUM(post_data);
+    std::string md5sum = getMD5SUM(data);
     
-    std::cout << "Model: " << post_data << std::endl;
+    std::cout << "Model: " << data << std::endl;
 
     // Set up an HTTP GET request message
     http::request<http::string_body> req{http::verb::get, target, version};
@@ -105,8 +99,8 @@ AIUSendModel(AIUModel kernel, AIURequestCode request_code, AIURequest *result) {
     req.set(http::field::content_md5, md5sum);
     req.set(http::field::protocol_request, AIUGetRequestString(request_code));
     req.keep_alive();
-    req.content_length(post_data.size());
-    req.body() = post_data;
+    req.content_length(data.size());
+    req.body() = data;
 
     // Send the HTTP request to the remote host
     http::write(request->stream, req);
@@ -127,10 +121,18 @@ AIUSendModel(AIUModel kernel, AIURequestCode request_code, AIURequest *result) {
 struct _AIUSolution {
   // graph contains binaries
   mlir::ModuleOp _module;
+
+  _AIUSolution(mlir::MLIRContext *ctx, const std::string &body) {
+    mlir::ParserConfig config(ctx);
+    auto moduleRef = mlir::parseSourceString<mlir::ModuleOp>(
+                         body.c_str(), config);
+    _module = moduleRef.release();
+    _module.dump();
+  }
 };
 
-extern "C" AIUResultCode AIURecvSolution(AIURequest request_,
-                                         AIUSolution *result_) {
+extern "C" AIUResultCode
+AIURecvSolution(AIURequest request_, AIUSolution *result_) {
   AIU_CHECK_OBJECT(request_);
   AIU_CHECK_RESULT(result_);
 
@@ -138,13 +140,11 @@ extern "C" AIUResultCode AIURecvSolution(AIURequest request_,
   http::response<http::dynamic_body> res;
 
   try {
-    // This buffer is used for reading and must be persisted
-
     // Receive the HTTP response
     http::read(request_->stream, request_->buffer, res);
   
     // Write the message to standard out
-    std::cout << res << std::endl;
+    //std::cout << res << std::endl;
 
     // Gracefully close the socket
     beast::error_code ec;
@@ -155,26 +155,9 @@ extern "C" AIUResultCode AIURecvSolution(AIURequest request_,
     return AIU_FAILURE;
   }
 
-  
-
-  *result_ = new _AIUSolution{};
+  std::string body = boost::beast::buffers_to_string(res.body().data());
+  *result_ = new _AIUSolution(request_->model->_module.getContext(), body);
 
   return AIU_SUCCESS;
 }
-
-/******************************************************************************/
-/*  SOLUTION SPEC                                                             */
-/******************************************************************************/
-
-/* -- Generated kernels and call graph */
-extern "C" AIUResultCode AIUGetObject(AIUSolution solution, AIUModel kernel,
-                                      AIUBinary *result) {
-  return AIU_FAILURE;
-}
-/*   - EGraph */
-/*   - Binary(s) */
-
-/* -- Tuning space */
-
-
 
