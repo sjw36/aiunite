@@ -7,7 +7,7 @@
 #include <mlir/CAPI/IR.h>
 
 #include <aiunite/client.h>
-#include <aiunite/internal/context.h>
+#include <aiunite/internal/model.h>
 #include <aiunite/internal/support.h>
 
 /******************************************************************************/
@@ -19,48 +19,29 @@ extern "C" AIUResultCode AIUReadRegistry(const char *filename) {
 }
 
 /******************************************************************************/
-/*  CONTEXT MGMT                                                              */
-/******************************************************************************/
-extern "C" AIUResultCode
-AIUCreateContext(AIUContext *result_) {
-  AIU_CHECK_RESULT(result_);  
-  *result_ = new _AIUContext;
-  return AIU_SUCCESS;
-}
-
-extern "C" AIUResultCode
-AIUDestroyContext(AIUContext context_) {
-  AIU_CHECK_OBJECT(context_);  
-  delete context_;
-  return AIU_SUCCESS;
-}
-
-/******************************************************************************/
 /*  PROBLEM SPEC                                                              */
 /******************************************************************************/
 
 extern "C" AIUResultCode
-AIUPrintModel(AIUModel model_, const char **result_) {
-  AIU_CHECK_OBJECT(model_);
-  AIU_CHECK_RESULT(result_);
-  *result_ = model_->print();
-  return AIU_SUCCESS;
-}
-
-extern "C" AIUResultCode
-AIUCreateModel(AIUContext context_, const char *name_,
-               AIUType returnType_, AIUModel *result_) {
-  AIU_CHECK_OBJECT(context_);
+AIUCreateModel(const char *name_, AIUModel *result_) {
   AIU_CHECK_OBJECT(name_);
   AIU_CHECK_RESULT(result_);
 
-  *result_ = new _AIUModel(context_->_d, name_, returnType_);
+  *result_ = new _AIUModel(name_);
   return AIU_SUCCESS;
 }
 
 extern "C" AIUResultCode
 AIUDestroyModel(AIUModel func_) {
   delete func_;
+  return AIU_SUCCESS;
+}
+
+extern "C" AIUResultCode
+AIUPrintModel(AIUModel model_, const char **result_) {
+  AIU_CHECK_OBJECT(model_);
+  AIU_CHECK_RESULT(result_);
+  *result_ = model_->print();
   return AIU_SUCCESS;
 }
 
@@ -79,10 +60,10 @@ AIUMakeTensorType(AIUContext, int64_t dim_cnt, int64_t dims[], AIUType elemType,
 }
 */
 
-mlir::Type getMLIRType(AIUContext context, AIUTypeEnum elemType) {
-  mlir::Builder b(context->_d);
+mlir::Type getMLIRType(AIUModel model_, AIUTypeEnum elemType_) {
+  mlir::OpBuilder b = model_->getBuilder();
   
-  switch (elemType) {
+  switch (elemType_) {
   case AIU_F64:
     return b.getF64Type();
   case AIU_F32:
@@ -109,25 +90,25 @@ mlir::Type getMLIRType(AIUContext context, AIUTypeEnum elemType) {
 
 
 extern "C" AIUResultCode
-AIUGetType(AIUContext context_, AIUTypeEnum elemType_, AIUType *result_) {
-  AIU_CHECK_OBJECT(context_);
+AIUGetType(AIUModel model_, AIUTypeEnum elemType_, AIUType *result_) {
+  AIU_CHECK_OBJECT(model_);
   AIU_CHECK_RESULT(result_);
-  if (mlir::Type etype = getMLIRType(context_, elemType_)) {
-    *result_ = context_->getNextType(etype);
+  if (mlir::Type etype = getMLIRType(model_, elemType_)) {
+    *result_ = model_->getNextType(etype);
     return AIU_SUCCESS;
   }
   return AIU_FAILURE;
 }
 
 extern "C" AIUResultCode
-AIUGetTensorType(AIUContext context_, int64_t dimCnt_, int64_t dims_[],
+AIUGetTensorType(AIUModel model_, int64_t dimCnt_, int64_t dims_[],
                  AIUTypeEnum elemType_, AIUType *result_) {
-  AIU_CHECK_OBJECT(context_);
+  AIU_CHECK_OBJECT(model_);
   AIU_CHECK_RESULT(result_);
-  if (mlir::Type etype = getMLIRType(context_, elemType_)) {
+  if (mlir::Type etype = getMLIRType(model_, elemType_)) {
     llvm::ArrayRef<int64_t> shape(dims_, dimCnt_);
     mlir::Type ttype = mlir::RankedTensorType::get(shape, etype);
-    *result_ = context_->getNextType(ttype);
+    *result_ = model_->getNextType(ttype);
     return AIU_SUCCESS;
   }
   return AIU_FAILURE;
@@ -490,42 +471,47 @@ AIUAddOperationWithAttrs(AIUModel func_, AIUOperationEnum opType_,
 /*  - set return value */
 extern "C" AIUResultCode
 AIUSetReturn(AIUModel func_, AIUValue retVal_) {
-  AIU_CHECK_OBJECT(func_);
+  AIU_GET_OBJECT(func);
   AIU_GET_OBJECT(retVal);
-  // check func return type vs return value
 
   auto loc = func_->getNextLoc();
   mlir::OpBuilder b = func_->getBuilder();
+  
   b.create<mlir::func::ReturnOp>(loc, retVal);
+
+  // 2) update function type
+  auto funcType = func.getFunctionType();
+  if (funcType.getResults().size() != 0) {
+    return AIU_FAILURE;
+  }
+  auto nFuncType = mlir::FunctionType::get(func.getContext(),
+                                           funcType.getInputs(),
+                                           {retVal.getType()});
+  func.setType(nFuncType);
 
   return AIU_SUCCESS;
 }
 
 
 /* 2. Clone Spec */
-extern "C" AIUResultCode AIUCloneModel(AIUContext context_, MlirOperation func_,
-                                       AIUModel *result_) {
-  AIU_CHECK_OBJECT(context_);
+extern "C" AIUResultCode
+AIUCloneModel(MlirOperation func_, AIUModel *result_) {
   AIU_CHECK_RESULT(result_);
   auto func = llvm::dyn_cast<mlir::func::FuncOp>(*unwrap(func_));
 
-  std::string modname = "module_";
-  auto mod =
-      mlir::ModuleOp::create(context_->_loc, (modname + func.getName()).str());
-
-  mod.push_back(func.clone());
+  *result_ = new _AIUModel(func);
+  
 
   // rename symbols
-  // strip out locations
+  // add locations
   // make large constants opaque
 
-  *result_ = new _AIUModel(mod, func);
   return AIU_SUCCESS;
 }
 
 /* 3. Generator Spec */
 extern "C" AIUResultCode
-AIUGenerateKernel(AIUContext, const char *options_, AIUModel *result_) {
+AIUGenerateKernel(AIUModel, const char *options_, AIUModel *result_) {
   return AIU_FAILURE;
 }
 

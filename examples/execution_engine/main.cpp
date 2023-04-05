@@ -14,9 +14,6 @@
 
 int main(int argc, char **argv) {
 
-  AIUContext ctx;
-  AIUCreateContext(&ctx);
-
   AIUModel model;
 
   if (argc > 1) {
@@ -43,24 +40,26 @@ int main(int argc, char **argv) {
     }
     mlir::ModuleOp module = moduleRef.release();
     module.walk(
-        [&](mlir::func::FuncOp f) { AIUCloneModel(ctx, wrap(&*f), &model); });
+        [&](mlir::func::FuncOp f) { AIUCloneModel(wrap(&*f), &model); });
   } else {
-    int64_t t0dims[4] = {128, 32, 32, 8};
-    int64_t t1dims[4] = {128, 3, 3, 8};
-    int64_t t2dims[1] = {128};
-    int64_t t3dims[4] = {128, 30, 30, 128};
-    AIUType t0type, t1type, t2type, t3type;
-    AIU_CHECK_SUCCESS(AIUGetTensorType(ctx, 4, t0dims, AIU_F32, &t0type));
-    AIU_CHECK_SUCCESS(AIUGetTensorType(ctx, 4, t1dims, AIU_F32, &t1type));
-    AIU_CHECK_SUCCESS(AIUGetTensorType(ctx, 1, t2dims, AIU_F32, &t2type));
-    AIU_CHECK_SUCCESS(AIUGetTensorType(ctx, 4, t3dims, AIU_F32, &t3type));
-    // func foo (%arg0, %arg1, %arg2) -> tensor<xf32> {
+    // func test (%arg0, %arg1, %arg2) -> tensor<xf32> {
     //   %cst = tosa.const <val> : type
     //   %0 = tosa.conv2d(%arg1, %arg2, %cst) attrs {...}
     //   %1 = tosa.add(%arg3, %0)
     //   return %1
     // }
-    AIU_CHECK_SUCCESS(AIUCreateModel(ctx, "foo", t3type, &model));
+    
+    AIU_CHECK_SUCCESS(AIUCreateModel("test", &model));
+    
+    int64_t t0dims[4] = {128, 32, 32, 8};
+    int64_t t1dims[4] = {128, 3, 3, 8};
+    int64_t t2dims[1] = {128};
+    int64_t t3dims[4] = {128, 30, 30, 128};
+    AIUType t0type, t1type, t2type, t3type;
+    AIU_CHECK_SUCCESS(AIUGetTensorType(model, 4, t0dims, AIU_F32, &t0type));
+    AIU_CHECK_SUCCESS(AIUGetTensorType(model, 4, t1dims, AIU_F32, &t1type));
+    AIU_CHECK_SUCCESS(AIUGetTensorType(model, 1, t2dims, AIU_F32, &t2type));
+    AIU_CHECK_SUCCESS(AIUGetTensorType(model, 4, t3dims, AIU_F32, &t3type));
     AIUValue param0;
     AIU_CHECK_SUCCESS(AIUAddParameter(model, t0type, &param0));
     AIUValue param1;

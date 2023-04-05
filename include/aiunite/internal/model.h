@@ -3,8 +3,8 @@
 /*  Common Pluggable eXchange                                                 */
 /******************************************************************************/
 
-#ifndef AIUNITE_INTERNAL_CONTEXT_H
-#define AIUNITE_INTERNAL_CONTEXT_H
+#ifndef AIUNITE_INTERNAL_MODEL_H
+#define AIUNITE_INTERNAL_MODEL_H
 
 #include <mlir/Dialect/Func/IR/FuncOps.h>
 #include <mlir/Dialect/Tosa/IR/TosaOps.h>
@@ -31,46 +31,41 @@ struct _AIUAttr {
   _AIUAttr(mlir::NamedAttribute a) : _d(a) {}
 };
 
-struct _AIUContext {
+struct _AIUModel {
   mlir::DialectRegistry _reg;
-  mlir::MLIRContext *_d;
+  mlir::MLIRContext *_context;
   mlir::Location _loc;
-  std::list<_AIUType> _types;
 
   mlir::DialectRegistry &getRegistry() {
     _reg.insert<mlir::func::FuncDialect>();
     return _reg;
   }
 
-  _AIUContext() :
-    _d(new mlir::MLIRContext(getRegistry())),
-    _loc(mlir::UnknownLoc::get(_d))
-  {
-    _d->loadDialect<mlir::func::FuncDialect,
-                    mlir::tosa::TosaDialect>();
-  }
-  ~_AIUContext() {
-    delete _d;
-  }
-
-  AIUType getNextType(mlir::Type t) {
-    _types.emplace_back(t);
-    return &_types.back();
-  }
-};
-
-struct _AIUModel {
   mlir::ModuleOp _module;
   mlir::func::FuncOp _d;
+  mlir::Block *_block;
   int64_t _opCnt = 0;
   mlir::StringAttr _file;
+  std::list<_AIUType> _types;
   std::list<_AIUAttr> _attrs;
   std::list<_AIUValue> _values;
-  std::string _model_print;
+  std::string _model_str;
 
-  _AIUModel(mlir::MLIRContext *ctx, const char *name_, AIUType returnType_)
-    : _opCnt(0) {
-    mlir::OpBuilder b(ctx);
+  _AIUModel()
+    : _context(new mlir::MLIRContext(getRegistry()))
+    , _loc(mlir::UnknownLoc::get(_context))
+    , _block(nullptr)
+    , _opCnt(0) {
+
+    // load dialects
+    _context->loadDialect<mlir::func::FuncDialect,
+                          mlir::tosa::TosaDialect>();
+  }
+  
+  // Build interface
+  _AIUModel(const char *name_)
+    : _AIUModel() {
+    mlir::OpBuilder b(_context);
     auto loc = b.getUnknownLoc();
     
     std::string modname = "module_";
@@ -78,56 +73,67 @@ struct _AIUModel {
 
     _file = b.getStringAttr(name_);
     
-    mlir::Type retType = b.getNoneType();
-    if (returnType_ != nullptr) {
-      retType = returnType_->_d;
-    }
-
-    auto funcType = b.getFunctionType({}, {retType});
+    auto funcType = b.getFunctionType({}, {});
     _d = b.create<mlir::func::FuncOp>(loc, name_, funcType);
     _d->setAttr("kernel", b.getUnitAttr());
 
-    /* mlir::Block *block = */ _d.addEntryBlock();
+    _block = _d.addEntryBlock();
   
     _module.push_back(_d);
   }
 
-  _AIUModel(mlir::ModuleOp mod, mlir::func::FuncOp func)
-    : _module(mod), _d(func) {
+  // Clone interface
+  _AIUModel(mlir::func::FuncOp func)
+    : _AIUModel() {
+    std::string modname = "module_";
+    _module = mlir::ModuleOp::create(_loc, (modname + func.getName()).str());
+
+    _d = func.clone();
+
+    _module.push_back(_d);
     // TODO: annotate ops with loc
   }
 
+  ~_AIUModel() {
+    delete _context;
+  }
+  
+  AIUType getNextType(mlir::Type t) {
+    //_model_str.clear();
+    _types.emplace_back(t);
+    return &_types.back();
+  }
+
   AIUValue getNextValue(mlir::Value v) {
-    //_model_print.clear();
+    //_model_str.clear();
     _values.emplace_back(v);
     return &_values.back();
   }
 
   AIUAttr getNextAttr(mlir::NamedAttribute a) {
-    //_model_print.clear();
+    //_model_str.clear();
     _attrs.emplace_back(a);
     return &_attrs.back();
   }
 
   mlir::Location getNextLoc() {
-    //_model_print.clear();
+    //_model_str.clear();
     return mlir::FileLineColLoc::get(_file, _opCnt++, 0);
   }
   mlir::OpBuilder getBuilder() {
-    //_model_print.clear();
-    mlir::Block *block = &_d.getBody().back();
-    return mlir::OpBuilder::atBlockEnd(block);
+    //_model_str.clear();
+    // TODO: store
+    return mlir::OpBuilder::atBlockEnd(_block);
   }
 
   const char *print() {
-    if (_model_print.empty()) {
-      llvm::raw_string_ostream os(_model_print);
+    if (_model_str.empty()) {
+      llvm::raw_string_ostream os(_model_str);
       mlir::OpPrintingFlags flags;
       _module.print(os, flags.enableDebugInfo().assumeVerified());
     }
-    return _model_print.c_str();
+    return _model_str.c_str();
   }
 };
 
-#endif /* AIUNITE_INTERNAL_CONTEXT_H */
-
+#endif /* AIUNITE_INTERNAL_MODEL_H */

@@ -17,30 +17,21 @@
 extern "C" AIUResultCode
 AIUReadRegistry(const char *filename);
 
-/******************************************************************************/
-/*  CONTEXT MGMT                                                              */
-/******************************************************************************/
-
-struct _AIUContext;
-typedef _AIUContext *AIUContext;
-struct _AIUModel;
-typedef _AIUModel *AIUModel;
-
 extern "C" AIUResultCode
-AIUCreateContext(AIUContext *result);
-
-extern "C" AIUResultCode
-AIUDestroyContext(AIUContext);
+AIUInitialize(const char *filename);
 
 /******************************************************************************/
 /*  PROBLEM SPEC                                                              */
 /******************************************************************************/
 
+struct _AIUModel;
+typedef _AIUModel *AIUModel;
+
 struct _AIUType;
 typedef _AIUType *AIUType;
 
 extern "C" AIUResultCode
-AIUCreateModel(AIUContext, const char *name, AIUType returnType, AIUModel *result);
+AIUCreateModel(const char *name_, AIUModel *result_);
 
 extern "C" AIUResultCode
 AIUDestroyModel(AIUModel);
@@ -188,10 +179,10 @@ AIUGetTensorType(AIUContext, int64_t dim_cnt, int64_t dims[], AIUType elemType, 
 */
 
 extern "C" AIUResultCode
-AIUGetType(AIUContext, AIUTypeEnum elemType, AIUType *result);
+AIUGetType(AIUModel, AIUTypeEnum elemType, AIUType *result);
 
 extern "C" AIUResultCode
-AIUGetTensorType(AIUContext, int64_t dim_cnt, int64_t dims[],
+AIUGetTensorType(AIUModel, int64_t dim_cnt, int64_t dims[],
                  AIUTypeEnum elemType, AIUType *result);
 
 /*  - kernel func params */
@@ -237,11 +228,11 @@ AIUSetReturn(AIUModel func, AIUValue retVals);
 
 /* 2. Clone Spec */
 extern "C" AIUResultCode
-AIUCloneModel(AIUContext, MlirOperation kernel, AIUModel *result);
+AIUCloneModel(MlirOperation kernel, AIUModel *result);
 
 /* 3. Generator Spec */
 extern "C" AIUResultCode
-AIUGenerateModel(AIUContext, const char *options, AIUModel *result);
+AIUGenerateModel(const char *options, AIUModel *result);
 /*
 extern "C" AIUResultCode AIUGenerateKernel(AIUContext, AIUOpType optype, ...,
 AIUModel *result);

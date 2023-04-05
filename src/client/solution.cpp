@@ -10,14 +10,7 @@
 #include <mlir/IR/BuiltinOps.h>
 
 #include <aiunite/client.h>
-
-#define AIU_CHECK_OBJECT(X) if (X != nullptr) ; \
-  else return AIU_INVALID_OBJECT
-#define AIU_GET_OBJECT(X) AIU_CHECK_OBJECT(X ## _);    \
-  auto X = X ## _->_d
-
-#define AIU_CHECK_RESULT(X) if (X != nullptr) ; \
-  else return AIU_INVALID_RESULT_PTR
+#include <aiunite/internal/support.h>
 
 
 /******************************************************************************/

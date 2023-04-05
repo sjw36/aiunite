@@ -8,7 +8,8 @@
 #include <mlir/Parser/Parser.h>
 
 #include <aiunite/client.h>
-#include <aiunite/internal/context.h>
+#include <aiunite/internal/model.h>
+#include <aiunite/internal/solution.h>
 #include <aiunite/internal/support.h>
 
 /******************************************************************************/
@@ -118,19 +119,6 @@ AIUSendModel(AIUModel kernel, AIURequestCode request_code, AIURequest *result) {
 }
 // with provider?
 
-struct _AIUSolution {
-  // graph contains binaries
-  mlir::ModuleOp _module;
-
-  _AIUSolution(mlir::MLIRContext *ctx, const std::string &body) {
-    mlir::ParserConfig config(ctx);
-    auto moduleRef = mlir::parseSourceString<mlir::ModuleOp>(
-                         body.c_str(), config);
-    _module = moduleRef.release();
-    _module.dump();
-  }
-};
-
 extern "C" AIUResultCode
 AIURecvSolution(AIURequest request_, AIUSolution *result_) {
   AIU_CHECK_OBJECT(request_);
@@ -156,7 +144,7 @@ AIURecvSolution(AIURequest request_, AIUSolution *result_) {
   }
 
   std::string body = boost::beast::buffers_to_string(res.body().data());
-  *result_ = new _AIUSolution(request_->model->_module.getContext(), body);
+  *result_ = new _AIUSolution(body);
 
   return AIU_SUCCESS;
 }
