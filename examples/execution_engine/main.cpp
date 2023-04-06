@@ -14,14 +14,15 @@
 
 int main(int argc, char **argv) {
 
+  // must persist for cloned funcs...
+  mlir::DialectRegistry registry;
+  registry.insert<mlir::func::FuncDialect, mlir::tosa::TosaDialect>();
+  mlir::MLIRContext context(registry);
+
   AIUModel model;
 
   if (argc > 1) {
     std::string errorMessage;
-
-    mlir::DialectRegistry registry;
-    registry.insert<mlir::func::FuncDialect, mlir::tosa::TosaDialect>();
-    mlir::MLIRContext context(registry);
 
     auto file = mlir::openInputFile(argv[1], &errorMessage);
     if (!file) {

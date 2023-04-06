@@ -121,7 +121,7 @@ AIUAddParameter(AIUModel func_, AIUType paramType_, AIUValue *result_) {
   AIU_CHECK_OBJECT(paramType_);
   AIU_CHECK_RESULT(result_);
 
-  mlir::Type paramTy = paramType_->_d;
+  mlir::Type paramTy = paramType_->get();
 
   // 1) update function type
   auto funcType = func.getFunctionType();
@@ -401,11 +401,11 @@ AIUAddOperation(AIUModel func_, AIUOperationEnum opType_, int64_t paramCnt_,
   llvm::SmallVector<mlir::Value, 4> params;
   for (int64_t i = 0; i < paramCnt_; ++i) {
     AIU_CHECK_OBJECT(params_[i]);
-    params.push_back(params_[i]->_d);
+    params.push_back(params_[i]->get());
   }
   mlir::Value resVal;
 
-#define AIU_2_TOSA(X, Y) case AIU_ ## X: resVal = b.create<mlir::tosa::Y>(loc, resType_->_d, params); break
+#define AIU_2_TOSA(X, Y) case AIU_ ## X: resVal = b.create<mlir::tosa::Y>(loc, resType_->get(), params); break
   
   switch (opType_) {
     AIU_2_TOSA(ADD, AddOp);
@@ -441,19 +441,19 @@ AIUAddOperationWithAttrs(AIUModel func_, AIUOperationEnum opType_,
   llvm::SmallVector<mlir::Value, 4> params;
   for (int64_t i = 0; i < paramCnt_; ++i) {
     AIU_CHECK_OBJECT(params_[i]);
-    params.push_back(params_[i]->_d);
+    params.push_back(params_[i]->get());
   }
 
   llvm::SmallVector<mlir::NamedAttribute, 4> attrs;
   for (int64_t i = 0; i < attrCnt_; ++i) {
     AIU_CHECK_OBJECT(attrs_[i]);
-    attrs.push_back(attrs_[i]->_d);
+    attrs.push_back(attrs_[i]->get());
   }
   
   mlir::Value resVal;
 
 #define AIU_2_TOSA_ATTR(X, Y) case AIU_ ## X: {                    \
-    auto op = b.create<mlir::tosa::Y>(loc, resType_->_d, params);  \
+    auto op = b.create<mlir::tosa::Y>(loc, resType_->get(), params); \
     op->setAttrs(attrs);                                           \
     resVal = op.getResult();                                      \
   } \

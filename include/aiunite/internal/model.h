@@ -14,42 +14,32 @@
 #include <list>
 
 /******************************************************************************/
-/*  CONTEXT MGMT                                                              */
+/*  MODEL MGMT                                                                */
 /******************************************************************************/
 
-struct _AIUType {
-  mlir::Type _d;
-  _AIUType(mlir::Type t) : _d(t) {}
+template <typename T>
+struct _AIUObject {
+  _AIUObject() {}
+  _AIUObject(T t) : _d(t) {}
+  T get() const { return  _d; }
+protected:
+  T _d;
 };
 
-struct _AIUValue {
-  mlir::Value _d;
-  _AIUValue(mlir::Value v) : _d(v) {}
-};
-struct _AIUAttr {
-  mlir::NamedAttribute _d;
-  _AIUAttr(mlir::NamedAttribute a) : _d(a) {}
+
+struct _AIUType : public _AIUObject<mlir::Type> {
+  using _AIUObject::_AIUObject;
 };
 
-struct _AIUModel {
-  mlir::DialectRegistry _reg;
-  mlir::MLIRContext *_context;
-  mlir::Location _loc;
+struct _AIUValue : public _AIUObject<mlir::Value> {
+  using _AIUObject::_AIUObject;
+};
 
-  mlir::DialectRegistry &getRegistry() {
-    _reg.insert<mlir::func::FuncDialect>();
-    return _reg;
-  }
+struct _AIUAttr : public _AIUObject<mlir::NamedAttribute> {
+  using _AIUObject::_AIUObject;
+};
 
-  mlir::ModuleOp _module;
-  mlir::func::FuncOp _d;
-  mlir::Block *_block;
-  int64_t _opCnt = 0;
-  mlir::StringAttr _file;
-  std::list<_AIUType> _types;
-  std::list<_AIUAttr> _attrs;
-  std::list<_AIUValue> _values;
-  std::string _model_str;
+struct _AIUModel : public _AIUObject<mlir::func::FuncOp> {
 
   _AIUModel()
     : _context(new mlir::MLIRContext(getRegistry()))
@@ -66,15 +56,14 @@ struct _AIUModel {
   _AIUModel(const char *name_)
     : _AIUModel() {
     mlir::OpBuilder b(_context);
-    auto loc = b.getUnknownLoc();
     
     std::string modname = "module_";
-    _module = mlir::ModuleOp::create(loc, modname + name_);
+    _module = mlir::ModuleOp::create(_loc, modname + name_);
 
     _file = b.getStringAttr(name_);
     
     auto funcType = b.getFunctionType({}, {});
-    _d = b.create<mlir::func::FuncOp>(loc, name_, funcType);
+    _d = b.create<mlir::func::FuncOp>(_loc, name_, funcType);
     _d->setAttr("kernel", b.getUnitAttr());
 
     _block = _d.addEntryBlock();
@@ -88,6 +77,7 @@ struct _AIUModel {
     std::string modname = "module_";
     _module = mlir::ModuleOp::create(_loc, (modname + func.getName()).str());
 
+    // TODO: types in clone types also!!!
     _d = func.clone();
 
     _module.push_back(_d);
@@ -97,7 +87,7 @@ struct _AIUModel {
   ~_AIUModel() {
     delete _context;
   }
-  
+
   AIUType getNextType(mlir::Type t) {
     //_model_str.clear();
     _types.emplace_back(t);
@@ -134,6 +124,25 @@ struct _AIUModel {
     }
     return _model_str.c_str();
   }
+
+private:
+  mlir::MLIRContext *_context;
+  mlir::Location _loc;
+
+  mlir::DialectRegistry &getRegistry() {
+    static mlir::DialectRegistry _reg;
+    _reg.insert<mlir::func::FuncDialect>(); // call once
+    return _reg;
+  }
+
+  mlir::ModuleOp _module;
+  mlir::Block *_block;
+  int64_t _opCnt = 0;
+  mlir::StringAttr _file;
+  std::list<_AIUType> _types;
+  std::list<_AIUAttr> _attrs;
+  std::list<_AIUValue> _values;
+  std::string _model_str;
 };
 
 #endif /* AIUNITE_INTERNAL_MODEL_H */

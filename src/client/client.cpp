@@ -132,7 +132,7 @@ AIURecvSolution(AIURequest request_, AIUSolution *result_) {
     http::read(request_->stream, request_->buffer, res);
   
     // Write the message to standard out
-    //std::cout << res << std::endl;
+    std::cout << res << std::endl;
 
     // Gracefully close the socket
     beast::error_code ec;
