@@ -66,7 +66,8 @@ struct _AIUSolution {
   void setResult(AIUResponseCode rcode, mlir::ModuleOp module) {
     code = rcode;
     llvm::raw_string_ostream os(body);
-    module.print(os);
+    mlir::OpPrintingFlags flags;
+    module.print(os, flags.enableDebugInfo().assumeVerified());
   }
 };
 
