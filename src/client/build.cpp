@@ -22,8 +22,7 @@ extern "C" AIUResultCode AIUReadRegistry(const char *filename) {
 /*  PROBLEM SPEC                                                              */
 /******************************************************************************/
 
-extern "C" AIUResultCode
-AIUCreateModel(const char *name_, AIUModel *result_) {
+extern "C" AIUResultCode AIUCreateModel(const char *name_, AIUModel *result_) {
   AIU_CHECK_OBJECT(name_);
   AIU_CHECK_RESULT(result_);
 
@@ -31,14 +30,12 @@ AIUCreateModel(const char *name_, AIUModel *result_) {
   return AIU_SUCCESS;
 }
 
-extern "C" AIUResultCode
-AIUDestroyModel(AIUModel func_) {
+extern "C" AIUResultCode AIUDestroyModel(AIUModel func_) {
   delete func_;
   return AIU_SUCCESS;
 }
 
-extern "C" AIUResultCode
-AIUPrintModel(AIUModel model_, const char **result_) {
+extern "C" AIUResultCode AIUPrintModel(AIUModel model_, const char **result_) {
   AIU_CHECK_OBJECT(model_);
   AIU_CHECK_RESULT(result_);
   *result_ = model_->print();
@@ -55,14 +52,14 @@ AIUModel *result);
 /*  - types */
 /*
 extern "C" AIUResultCode
-AIUMakeTensorType(AIUContext, int64_t dim_cnt, int64_t dims[], AIUType elemType, AIUType *result) {
-  return AIU_FAILURE;
+AIUMakeTensorType(AIUContext, int64_t dim_cnt, int64_t dims[], AIUType elemType,
+AIUType *result) { return AIU_FAILURE;
 }
 */
 
 mlir::Type getMLIRType(AIUModel model_, AIUTypeEnum elemType_) {
   mlir::OpBuilder b = model_->getBuilder();
-  
+
   switch (elemType_) {
   case AIU_F64:
     return b.getF64Type();
@@ -88,9 +85,8 @@ mlir::Type getMLIRType(AIUModel model_, AIUTypeEnum elemType_) {
   return b.getNoneType();
 }
 
-
-extern "C" AIUResultCode
-AIUGetType(AIUModel model_, AIUTypeEnum elemType_, AIUType *result_) {
+extern "C" AIUResultCode AIUGetType(AIUModel model_, AIUTypeEnum elemType_,
+                                    AIUType *result_) {
   AIU_CHECK_OBJECT(model_);
   AIU_CHECK_RESULT(result_);
   if (mlir::Type etype = getMLIRType(model_, elemType_)) {
@@ -100,9 +96,10 @@ AIUGetType(AIUModel model_, AIUTypeEnum elemType_, AIUType *result_) {
   return AIU_FAILURE;
 }
 
-extern "C" AIUResultCode
-AIUGetTensorType(AIUModel model_, int64_t dimCnt_, int64_t dims_[],
-                 AIUTypeEnum elemType_, AIUType *result_) {
+extern "C" AIUResultCode AIUGetTensorType(AIUModel model_, int64_t dimCnt_,
+                                          int64_t dims_[],
+                                          AIUTypeEnum elemType_,
+                                          AIUType *result_) {
   AIU_CHECK_OBJECT(model_);
   AIU_CHECK_RESULT(result_);
   if (mlir::Type etype = getMLIRType(model_, elemType_)) {
@@ -115,8 +112,8 @@ AIUGetTensorType(AIUModel model_, int64_t dimCnt_, int64_t dims_[],
 }
 
 /*  - kernel func params */
-extern "C" AIUResultCode
-AIUAddParameter(AIUModel func_, AIUType paramType_, AIUValue *result_) {
+extern "C" AIUResultCode AIUAddParameter(AIUModel func_, AIUType paramType_,
+                                         AIUValue *result_) {
   AIU_GET_OBJECT(func);
   AIU_CHECK_OBJECT(paramType_);
   AIU_CHECK_RESULT(result_);
@@ -127,66 +124,101 @@ AIUAddParameter(AIUModel func_, AIUType paramType_, AIUValue *result_) {
   auto funcType = func.getFunctionType();
   llvm::SmallVector<mlir::Type, 8> types(funcType.getInputs());
   types.push_back(paramTy);
-  auto nFuncType = mlir::FunctionType::get(func.getContext(), types,
-                                           funcType.getResults());
+  auto nFuncType =
+      mlir::FunctionType::get(func.getContext(), types, funcType.getResults());
   func.setType(nFuncType);
 
   // 2) add to block
   mlir::Block *block = &func.getBlocks().front();
   mlir::Value param = block->addArgument(paramTy, func_->getNextLoc());
   *result_ = func_->getNextValue(param);
-  
+
   return AIU_SUCCESS;
 }
 
 const char *AIUGetAttrName(AIUAttrEnum attr) {
   switch (attr) {
-  case AIU_AXIS_ATTR: return "axis";
-  case AIU_BORDER_ATTR: return "border";
-  case AIU_CONFIG_ATTR: return "config";
-  case AIU_DILATION_ATTR: return "dilation";
-  case AIU_DOUBLE_ROUND_ATTR: return "double_round";
-  case AIU_IDENTIFIER_ATTR: return "identifier";
-  case AIU_IMPLEMENTATION_ATTRS_ATTR: return "implementation_attrs";
-  case AIU_INPUT_ZP_ATTR: return "input_zp";
-  case AIU_INVERSE_ATTR: return "inverse";
-  case AIU_KERNEL_ATTR: return "kernel";
-  case AIU_MAX_FP_ATTR: return "max_fp";
-  case AIU_MAX_INT_ATTR: return "max_int";
-  case AIU_MIN_FP_ATTR: return "min_fp";
-  case AIU_MIN_INT_ATTR: return "min_int";
-  case AIU_MODE_ATTR: return "mode";
-  case AIU_MULTIPLES_ATTR: return "multiples";
-  case AIU_MULTIPLIER_ATTR: return "multiplier";
-  case AIU_NEW_SHAPE_ATTR: return "new_shape";
-  case AIU_OFFSET_ATTR: return "offset";
-  case AIU_OUT_PAD_ATTR: return "out_pad";
-  case AIU_OUTPUT_ZP_ATTR: return "output_zp";
-  case AIU_OUT_SHAPE_ATTR: return "out_shape";
-  case AIU_PAD_ATTR: return "pad";
-  case AIU_PER_CHANNEL_ATTR: return "per_channel";
-  case AIU_CONV_QUANTIZATION_INFO_ATTR: return "quantization_info";
-  case AIU_MATMUL_QUANTIZATION_INFO_ATTR: return "quantization_info";
-  case AIU_PAD_QUANTIZATION_INFO_ATTR: return "quantization_info";
-  case AIU_UNARY_QUANTIZATION_INFO_ATTR: return "quantization_info";
-  case AIU_ROUND_ATTR: return "round";
-  case AIU_SCALE32_ATTR: return "scale32";
-  case AIU_SCALE_ATTR: return "scale";
-  case AIU_SHIFT_ARRAY_ATTR: return "shift";
-  case AIU_SHIFT_ATTR: return "shift";
-  case AIU_SIZE_ATTR: return "size";
-  case AIU_START_ATTR: return "start";
-  case AIU_STRIDE_ATTR: return "stride";
-  case AIU_VALUE_ATTR: return "value";
+  case AIU_AXIS_ATTR:
+    return "axis";
+  case AIU_BORDER_ATTR:
+    return "border";
+  case AIU_CONFIG_ATTR:
+    return "config";
+  case AIU_DILATION_ATTR:
+    return "dilation";
+  case AIU_DOUBLE_ROUND_ATTR:
+    return "double_round";
+  case AIU_IDENTIFIER_ATTR:
+    return "identifier";
+  case AIU_IMPLEMENTATION_ATTRS_ATTR:
+    return "implementation_attrs";
+  case AIU_INPUT_ZP_ATTR:
+    return "input_zp";
+  case AIU_INVERSE_ATTR:
+    return "inverse";
+  case AIU_KERNEL_ATTR:
+    return "kernel";
+  case AIU_MAX_FP_ATTR:
+    return "max_fp";
+  case AIU_MAX_INT_ATTR:
+    return "max_int";
+  case AIU_MIN_FP_ATTR:
+    return "min_fp";
+  case AIU_MIN_INT_ATTR:
+    return "min_int";
+  case AIU_MODE_ATTR:
+    return "mode";
+  case AIU_MULTIPLES_ATTR:
+    return "multiples";
+  case AIU_MULTIPLIER_ATTR:
+    return "multiplier";
+  case AIU_NEW_SHAPE_ATTR:
+    return "new_shape";
+  case AIU_OFFSET_ATTR:
+    return "offset";
+  case AIU_OUT_PAD_ATTR:
+    return "out_pad";
+  case AIU_OUTPUT_ZP_ATTR:
+    return "output_zp";
+  case AIU_OUT_SHAPE_ATTR:
+    return "out_shape";
+  case AIU_PAD_ATTR:
+    return "pad";
+  case AIU_PER_CHANNEL_ATTR:
+    return "per_channel";
+  case AIU_CONV_QUANTIZATION_INFO_ATTR:
+    return "quantization_info";
+  case AIU_MATMUL_QUANTIZATION_INFO_ATTR:
+    return "quantization_info";
+  case AIU_PAD_QUANTIZATION_INFO_ATTR:
+    return "quantization_info";
+  case AIU_UNARY_QUANTIZATION_INFO_ATTR:
+    return "quantization_info";
+  case AIU_ROUND_ATTR:
+    return "round";
+  case AIU_SCALE32_ATTR:
+    return "scale32";
+  case AIU_SCALE_ATTR:
+    return "scale";
+  case AIU_SHIFT_ARRAY_ATTR:
+    return "shift";
+  case AIU_SHIFT_ATTR:
+    return "shift";
+  case AIU_SIZE_ATTR:
+    return "size";
+  case AIU_START_ATTR:
+    return "start";
+  case AIU_STRIDE_ATTR:
+    return "stride";
+  case AIU_VALUE_ATTR:
+    return "value";
   }
   return nullptr;
 }
 
-
 /*  - make attribute */
-extern "C" AIUResultCode
-AIUMakeAttr(AIUModel func_, AIUAttrEnum type_, void *value_,
-            AIUAttr *result_) {
+extern "C" AIUResultCode AIUMakeAttr(AIUModel func_, AIUAttrEnum type_,
+                                     void *value_, AIUAttr *result_) {
   AIU_CHECK_OBJECT(func_);
   AIU_CHECK_RESULT(result_);
 
@@ -202,7 +234,7 @@ AIUMakeAttr(AIUModel func_, AIUAttrEnum type_, void *value_,
   case AIU_PER_CHANNEL_ATTR:
   case AIU_ROUND_ATTR:
   case AIU_SCALE32_ATTR:
-    attr = b.getBoolAttr(*reinterpret_cast<int32_t*>(value_));
+    attr = b.getBoolAttr(*reinterpret_cast<int32_t *>(value_));
     break;
   case AIU_MULTIPLIER_ATTR:
   case AIU_SHIFT_ARRAY_ATTR:
@@ -222,12 +254,12 @@ AIUMakeAttr(AIUModel func_, AIUAttrEnum type_, void *value_,
   case AIU_STRIDE_ATTR:
     return AIU_FAILURE; // array attr
   case AIU_VALUE_ATTR:
-    //attr = ::mlir::ElementsAttr;
+    // attr = ::mlir::ElementsAttr;
     assert(0);
     break;
   case AIU_MAX_FP_ATTR:
   case AIU_MIN_FP_ATTR:
-    attr = b.getF32FloatAttr(*reinterpret_cast<float*>(value_));
+    attr = b.getF32FloatAttr(*reinterpret_cast<float *>(value_));
     break;
   case AIU_AXIS_ATTR:
   case AIU_INPUT_ZP_ATTR:
@@ -235,25 +267,25 @@ AIUMakeAttr(AIUModel func_, AIUAttrEnum type_, void *value_,
   case AIU_MIN_INT_ATTR:
   case AIU_OUTPUT_ZP_ATTR:
   case AIU_SHIFT_ATTR:
-    attr = b.getI32IntegerAttr(*reinterpret_cast<int32_t*>(value_));
+    attr = b.getI32IntegerAttr(*reinterpret_cast<int32_t *>(value_));
     break;
   case AIU_CONFIG_ATTR:
   case AIU_IDENTIFIER_ATTR:
   case AIU_IMPLEMENTATION_ATTRS_ATTR:
   case AIU_MODE_ATTR:
-    attr = b.getStringAttr(reinterpret_cast<const char*>(value_));
+    attr = b.getStringAttr(reinterpret_cast<const char *>(value_));
     break;
   case AIU_CONV_QUANTIZATION_INFO_ATTR:
-    //attr = mlir::tosa::ConvOpQuantizationAttr;
+    // attr = mlir::tosa::ConvOpQuantizationAttr;
     break;
   case AIU_MATMUL_QUANTIZATION_INFO_ATTR:
-    //attr = mlir::tosa::MatMulOpQuantizationAttr;
+    // attr = mlir::tosa::MatMulOpQuantizationAttr;
     break;
   case AIU_PAD_QUANTIZATION_INFO_ATTR:
-    //attr = mlir::tosa::PadOpQuantizationAttr;
+    // attr = mlir::tosa::PadOpQuantizationAttr;
     break;
   case AIU_UNARY_QUANTIZATION_INFO_ATTR:
-    //attr = mlir::tosa::UnaryOpQuantizationAttr;
+    // attr = mlir::tosa::UnaryOpQuantizationAttr;
     break;
   }
 
@@ -261,19 +293,19 @@ AIUMakeAttr(AIUModel func_, AIUAttrEnum type_, void *value_,
     *result_ = func_->getNextAttr(b.getNamedAttr(attr_name, attr));
     return AIU_SUCCESS;
   }
-  
+
   return AIU_FAILURE;
 }
 
 template <typename T>
 static llvm::ArrayRef<T> getARef(void *vals_, int64_t cnt_) {
-  return llvm::ArrayRef<T>(reinterpret_cast<T*>(vals_), cnt_);
+  return llvm::ArrayRef<T>(reinterpret_cast<T *>(vals_), cnt_);
 }
 
 /*  - make attribute */
-extern "C" AIUResultCode
-AIUMakeArrayAttr(AIUModel func_, AIUAttrEnum type_, int64_t valCnt_, void *value_,
-                 AIUAttr *result_) {
+extern "C" AIUResultCode AIUMakeArrayAttr(AIUModel func_, AIUAttrEnum type_,
+                                          int64_t valCnt_, void *value_,
+                                          AIUAttr *result_) {
   AIU_CHECK_OBJECT(func_);
   AIU_CHECK_RESULT(result_);
 
@@ -311,14 +343,13 @@ AIUMakeArrayAttr(AIUModel func_, AIUAttrEnum type_, int64_t valCnt_, void *value
     *result_ = func_->getNextAttr(b.getNamedAttr(attr_name, attr));
     return AIU_SUCCESS;
   }
-  
+
   return AIU_FAILURE;
 }
 
 /*  - add constant */
-extern "C" AIUResultCode
-AIUAddConstant(AIUModel func_, AIUType resType_, void *value_,
-               AIUValue *result_) {
+extern "C" AIUResultCode AIUAddConstant(AIUModel func_, AIUType resType_,
+                                        void *value_, AIUValue *result_) {
   AIU_CHECK_OBJECT(func_);
   AIU_GET_OBJECT(resType);
   AIU_CHECK_RESULT(result_);
@@ -331,14 +362,14 @@ AIUAddConstant(AIUModel func_, AIUType resType_, void *value_,
 
   mlir::Attribute attr;
   if (elemType.isF32()) {
-    attr = mlir::DenseFPElementsAttr::get(resType,
-           getARef<float>(value_, resShapeType.getNumElements()));
+    attr = mlir::DenseFPElementsAttr::get(
+        resType, getARef<float>(value_, resShapeType.getNumElements()));
   } else if (elemType.isInteger(64)) {
-    attr = mlir::DenseIntElementsAttr::get(resType,
-           getARef<int64_t>(value_, resShapeType.getNumElements()));
+    attr = mlir::DenseIntElementsAttr::get(
+        resType, getARef<int64_t>(value_, resShapeType.getNumElements()));
   } else if (elemType.isInteger(32)) {
-    attr = mlir::DenseIntElementsAttr::get(resType,
-           getARef<int32_t>(value_, resShapeType.getNumElements()));
+    attr = mlir::DenseIntElementsAttr::get(
+        resType, getARef<int32_t>(value_, resShapeType.getNumElements()));
   } else {
     return AIU_FAILURE;
   }
@@ -350,9 +381,8 @@ AIUAddConstant(AIUModel func_, AIUType resType_, void *value_,
 }
 
 /*  - add constant */
-extern "C" AIUResultCode
-AIUAddConstantSplat(AIUModel func_, AIUType resType_, void *value_,
-                    AIUValue *result_) {
+extern "C" AIUResultCode AIUAddConstantSplat(AIUModel func_, AIUType resType_,
+                                             void *value_, AIUValue *result_) {
   AIU_GET_OBJECT(func);
   AIU_GET_OBJECT(resType);
   AIU_CHECK_RESULT(result_);
@@ -366,14 +396,13 @@ AIUAddConstantSplat(AIUModel func_, AIUType resType_, void *value_,
 
   mlir::Attribute attr;
   if (elemType.isF32()) {
-    attr = mlir::DenseFPElementsAttr::get(resType,
-           getARef<float>(value_, 1));
+    attr = mlir::DenseFPElementsAttr::get(resType, getARef<float>(value_, 1));
   } else if (elemType.isInteger(64)) {
-    attr = mlir::DenseIntElementsAttr::get(resType,
-           getARef<int64_t>(value_, 1));
+    attr =
+        mlir::DenseIntElementsAttr::get(resType, getARef<int64_t>(value_, 1));
   } else if (elemType.isInteger(32)) {
-    attr = mlir::DenseIntElementsAttr::get(resType,
-           getARef<int32_t>(value_, 1));
+    attr =
+        mlir::DenseIntElementsAttr::get(resType, getARef<int32_t>(value_, 1));
   } else {
     return AIU_FAILURE;
   }
@@ -385,9 +414,10 @@ AIUAddConstantSplat(AIUModel func_, AIUType resType_, void *value_,
 }
 
 /*  - add operation */
-extern "C" AIUResultCode
-AIUAddOperation(AIUModel func_, AIUOperationEnum opType_, int64_t paramCnt_,
-                AIUValue *params_, AIUType resType_, AIUValue *result_) {
+extern "C" AIUResultCode AIUAddOperation(AIUModel func_,
+                                         AIUOperationEnum opType_,
+                                         int64_t paramCnt_, AIUValue *params_,
+                                         AIUType resType_, AIUValue *result_) {
   AIU_CHECK_OBJECT(func_);
   AIU_CHECK_OBJECT(resType_);
   AIU_CHECK_RESULT(result_);
@@ -397,7 +427,7 @@ AIUAddOperation(AIUModel func_, AIUOperationEnum opType_, int64_t paramCnt_,
 
   auto loc = func_->getNextLoc();
   mlir::OpBuilder b = func_->getBuilder();
-  
+
   llvm::SmallVector<mlir::Value, 4> params;
   for (int64_t i = 0; i < paramCnt_; ++i) {
     AIU_CHECK_OBJECT(params_[i]);
@@ -405,26 +435,28 @@ AIUAddOperation(AIUModel func_, AIUOperationEnum opType_, int64_t paramCnt_,
   }
   mlir::Value resVal;
 
-#define AIU_2_TOSA(X, Y) case AIU_ ## X: resVal = b.create<mlir::tosa::Y>(loc, resType_->get(), params); break
-  
+#define AIU_2_TOSA(X, Y)                                                       \
+  case AIU_##X:                                                                \
+    resVal = b.create<mlir::tosa::Y>(loc, resType_->get(), params);            \
+    break
+
   switch (opType_) {
     AIU_2_TOSA(ADD, AddOp);
     AIU_2_TOSA(MUL, MulOp);
-    default:
-      return AIU_FAILURE; // unknown op
-      break;
+  default:
+    return AIU_FAILURE; // unknown op
+    break;
   }
   *result_ = func_->getNextValue(resVal);
-  
+
   return AIU_SUCCESS;
 }
 
 /*  - add operation */
 extern "C" AIUResultCode
 AIUAddOperationWithAttrs(AIUModel func_, AIUOperationEnum opType_,
-                         int64_t paramCnt_, AIUValue *params_,
-                         int64_t attrCnt_, AIUAttr *attrs_,
-                         AIUType resType_, AIUValue *result_) {
+                         int64_t paramCnt_, AIUValue *params_, int64_t attrCnt_,
+                         AIUAttr *attrs_, AIUType resType_, AIUValue *result_) {
   AIU_CHECK_OBJECT(func_);
   AIU_CHECK_OBJECT(resType_);
   AIU_CHECK_RESULT(result_);
@@ -437,7 +469,7 @@ AIUAddOperationWithAttrs(AIUModel func_, AIUOperationEnum opType_,
 
   auto loc = func_->getNextLoc();
   mlir::OpBuilder b = func_->getBuilder();
-  
+
   llvm::SmallVector<mlir::Value, 4> params;
   for (int64_t i = 0; i < paramCnt_; ++i) {
     AIU_CHECK_OBJECT(params_[i]);
@@ -449,19 +481,20 @@ AIUAddOperationWithAttrs(AIUModel func_, AIUOperationEnum opType_,
     AIU_CHECK_OBJECT(attrs_[i]);
     attrs.push_back(attrs_[i]->get());
   }
-  
+
   mlir::Value resVal;
 
-#define AIU_2_TOSA_ATTR(X, Y) case AIU_ ## X: {                    \
-    auto op = b.create<mlir::tosa::Y>(loc, resType_->get(), params); \
-    op->setAttrs(attrs);                                           \
-    resVal = op.getResult();                                      \
-  } \
-  break
-  
+#define AIU_2_TOSA_ATTR(X, Y)                                                  \
+  case AIU_##X: {                                                              \
+    auto op = b.create<mlir::tosa::Y>(loc, resType_->get(), params);           \
+    op->setAttrs(attrs);                                                       \
+    resVal = op.getResult();                                                   \
+  } break
+
   switch (opType_) {
-  AIU_2_TOSA_ATTR(CONV2D, Conv2DOp);
-  default: return AIU_FAILURE;
+    AIU_2_TOSA_ATTR(CONV2D, Conv2DOp);
+  default:
+    return AIU_FAILURE;
   }
 
   *result_ = func_->getNextValue(resVal);
@@ -469,14 +502,13 @@ AIUAddOperationWithAttrs(AIUModel func_, AIUOperationEnum opType_,
 }
 
 /*  - set return value */
-extern "C" AIUResultCode
-AIUSetReturn(AIUModel func_, AIUValue retVal_) {
+extern "C" AIUResultCode AIUSetReturn(AIUModel func_, AIUValue retVal_) {
   AIU_GET_OBJECT(func);
   AIU_GET_OBJECT(retVal);
 
   auto loc = func_->getNextLoc();
   mlir::OpBuilder b = func_->getBuilder();
-  
+
   b.create<mlir::func::ReturnOp>(loc, retVal);
 
   // 2) update function type
@@ -484,23 +516,19 @@ AIUSetReturn(AIUModel func_, AIUValue retVal_) {
   if (funcType.getResults().size() != 0) {
     return AIU_FAILURE;
   }
-  auto nFuncType = mlir::FunctionType::get(func.getContext(),
-                                           funcType.getInputs(),
-                                           {retVal.getType()});
+  auto nFuncType = mlir::FunctionType::get(
+      func.getContext(), funcType.getInputs(), {retVal.getType()});
   func.setType(nFuncType);
 
   return AIU_SUCCESS;
 }
 
-
 /* 2. Clone Spec */
-extern "C" AIUResultCode
-AIUCloneModel(MlirOperation func_, AIUModel *result_) {
+extern "C" AIUResultCode AIUCloneModel(MlirOperation func_, AIUModel *result_) {
   AIU_CHECK_RESULT(result_);
   auto func = llvm::dyn_cast<mlir::func::FuncOp>(*unwrap(func_));
 
   *result_ = new _AIUModel(func);
-  
 
   // rename symbols
   // add locations
@@ -510,8 +538,7 @@ AIUCloneModel(MlirOperation func_, AIUModel *result_) {
 }
 
 /* 3. Generator Spec */
-extern "C" AIUResultCode
-AIUGenerateKernel(AIUModel, const char *options_, AIUModel *result_) {
+extern "C" AIUResultCode AIUGenerateKernel(AIUModel, const char *options_,
+                                           AIUModel *result_) {
   return AIU_FAILURE;
 }
-

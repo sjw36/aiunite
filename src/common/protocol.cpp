@@ -6,12 +6,11 @@
 
 #include <aiunite/protocol.h>
 
-
-
-
-extern "C" int returnResult(const char *resultCode, const char *file_name, int line_num) {
+extern "C" int returnResult(const char *resultCode, const char *file_name,
+                            int line_num) {
 #ifndef NDEBUG
-  std::cout << "error(" << file_name << "[" << line_num << "]): " << resultCode << std::endl;
+  std::cout << "error(" << file_name << "[" << line_num << "]): " << resultCode
+            << std::endl;
 #endif
   return -1;
 }

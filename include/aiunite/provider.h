@@ -32,16 +32,26 @@ typedef _AIUSolution *AIUSolution;
 typedef AIUResponseCode (*AIUCallBack)(AIURequest request,
                                        AIUSolution solution);
 
-extern "C" AIUResultCode AIUCreateService(int port, AIUCallBack cb);
+extern "C" AIUResultCode AIUCreateService(int port_, AIUCallBack callback_);
 
 /******************************************************************************/
 /*  WALK                                                               */
 /******************************************************************************/
 
-extern "C" MlirModule AIUGetModule(AIURequest request);
+extern "C" const char *AIUGetMD5(AIURequest request_);
 
-extern "C" AIURequestCode AIUGetRequestCode(AIURequest request);
+extern "C" MlirModule AIUGetModule(AIURequest request_);
 
-extern "C" AIUResultCode AIUSetModule(AIUSolution solution, MlirModule module);
+extern "C" AIURequestCode AIUGetRequestCode(AIURequest request_);
+
+/******************************************************************************/
+/*  SOLUTION RESPONSE                                                         */
+/******************************************************************************/
+
+extern "C" AIUResultCode AIUSendModule(AIUSolution solution_,
+                                       MlirModule module_);
+
+extern "C" AIUResultCode AIUSendErrorCode(AIUSolution solution_,
+                                          AIUResponseCode code_);
 
 #endif /* AIUNITE_SERVER_H */

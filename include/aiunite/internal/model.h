@@ -8,8 +8,8 @@
 
 #include <mlir/Dialect/Func/IR/FuncOps.h>
 #include <mlir/Dialect/Tosa/IR/TosaOps.h>
-#include <mlir/IR/BuiltinTypes.h>
 #include <mlir/IR/BuiltinOps.h>
+#include <mlir/IR/BuiltinTypes.h>
 
 #include <list>
 
@@ -17,15 +17,14 @@
 /*  MODEL MGMT                                                                */
 /******************************************************************************/
 
-template <typename T>
-struct _AIUObject {
+template <typename T> struct _AIUObject {
   _AIUObject() {}
   _AIUObject(T t) : _d(t) {}
-  T get() const { return  _d; }
+  T get() const { return _d; }
+
 protected:
   T _d;
 };
-
 
 struct _AIUType : public _AIUObject<mlir::Type> {
   using _AIUObject::_AIUObject;
@@ -42,38 +41,33 @@ struct _AIUAttr : public _AIUObject<mlir::NamedAttribute> {
 struct _AIUModel : public _AIUObject<mlir::func::FuncOp> {
 
   _AIUModel()
-    : _context(new mlir::MLIRContext(getRegistry()))
-    , _loc(mlir::UnknownLoc::get(_context))
-    , _block(nullptr)
-    , _opCnt(0) {
+      : _context(new mlir::MLIRContext(getRegistry())),
+        _loc(mlir::UnknownLoc::get(_context)), _block(nullptr), _opCnt(0) {
 
     // load dialects
-    _context->loadDialect<mlir::func::FuncDialect,
-                          mlir::tosa::TosaDialect>();
+    _context->loadDialect<mlir::func::FuncDialect, mlir::tosa::TosaDialect>();
   }
-  
+
   // Build interface
-  _AIUModel(const char *name_)
-    : _AIUModel() {
+  _AIUModel(const char *name_) : _AIUModel() {
     mlir::OpBuilder b(_context);
-    
+
     std::string modname = "module_";
     _module = mlir::ModuleOp::create(_loc, modname + name_);
 
     _file = b.getStringAttr(name_);
-    
+
     auto funcType = b.getFunctionType({}, {});
     _d = b.create<mlir::func::FuncOp>(_loc, name_, funcType);
     _d->setAttr("kernel", b.getUnitAttr());
 
     _block = _d.addEntryBlock();
-  
+
     _module.push_back(_d);
   }
 
   // Clone interface
-  _AIUModel(mlir::func::FuncOp func)
-    : _AIUModel() {
+  _AIUModel(mlir::func::FuncOp func) : _AIUModel() {
     std::string modname = "module_";
     _module = mlir::ModuleOp::create(_loc, (modname + func.getName()).str());
 
@@ -84,9 +78,7 @@ struct _AIUModel : public _AIUObject<mlir::func::FuncOp> {
     // TODO: annotate ops with loc
   }
 
-  ~_AIUModel() {
-    delete _context;
-  }
+  ~_AIUModel() { delete _context; }
 
   AIUType getNextType(mlir::Type t) {
     //_model_str.clear();

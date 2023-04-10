@@ -17,24 +17,24 @@
 /******************************************************************************/
 
 #include <boost/algorithm/hex.hpp>
+#include <boost/asio/connect.hpp>
+#include <boost/asio/ip/tcp.hpp>
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
 #include <boost/beast/version.hpp>
-#include <boost/asio/connect.hpp>
-#include <boost/asio/ip/tcp.hpp>
 #include <boost/uuid/detail/md5.hpp>
 #include <cstdlib>
 #include <iostream>
 #include <string>
 
-namespace beast = boost::beast;     // from <boost/beast.hpp>
-namespace http = beast::http;       // from <boost/beast/http.hpp>
-namespace net = boost::asio;        // from <boost/asio.hpp>
-using tcp = net::ip::tcp;           // from <boost/asio/ip/tcp.hpp>
+namespace beast = boost::beast; // from <boost/beast.hpp>
+namespace http = beast::http;   // from <boost/beast/http.hpp>
+namespace net = boost::asio;    // from <boost/asio.hpp>
+using tcp = net::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
 
 struct _AIURequest {
   AIUModel model;
-  
+
   // The io_context is required for all I/O
   net::io_context ioc;
 
@@ -44,7 +44,7 @@ struct _AIURequest {
   beast::flat_buffer buffer;
 
   _AIURequest(AIUModel model_)
-    : model(model_), ioc(), resolver(ioc), stream(ioc) {}
+      : model(model_), ioc(), resolver(ioc), stream(ioc) {}
 
   void init(const char *host, const char *port) {
     // Look up the domain name
@@ -88,7 +88,7 @@ AIUSendModel(AIUModel kernel, AIURequestCode request_code, AIURequest *result) {
     std::string data(kernel_str);
 
     std::string md5sum = getMD5SUM(data);
-    
+
     std::cout << "Model: " << data << std::endl;
 
     // Set up an HTTP GET request message
@@ -119,8 +119,8 @@ AIUSendModel(AIUModel kernel, AIURequestCode request_code, AIURequest *result) {
 }
 // with provider?
 
-extern "C" AIUResultCode
-AIURecvSolution(AIURequest request_, AIUSolution *result_) {
+extern "C" AIUResultCode AIURecvSolution(AIURequest request_,
+                                         AIUSolution *result_) {
   AIU_CHECK_OBJECT(request_);
   AIU_CHECK_RESULT(result_);
 
@@ -130,7 +130,7 @@ AIURecvSolution(AIURequest request_, AIUSolution *result_) {
   try {
     // Receive the HTTP response
     http::read(request_->stream, request_->buffer, res);
-  
+
     // Write the message to standard out
     std::cout << res << std::endl;
 
@@ -148,4 +148,3 @@ AIURecvSolution(AIURequest request_, AIUSolution *result_) {
 
   return AIU_SUCCESS;
 }
-

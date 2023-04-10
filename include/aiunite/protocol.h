@@ -25,10 +25,14 @@
 #define AIU_INVALID_RESULT_PTR 3
 #define AIU_FAILURE_MASK -1
 
-extern "C" int returnResult(const char *resultCode, const char *file_name, int line_num);
+extern "C" int returnResult(const char *resultCode, const char *file_name,
+                            int line_num);
 
-#define AIU_CHECK_SUCCESS(X) if (X == AIU_SUCCESS) ; \
-  else return returnResult(# X, __FILE__, __LINE__)
+#define AIU_CHECK_SUCCESS(X)                                                   \
+  if (X == AIU_SUCCESS)                                                        \
+    ;                                                                          \
+  else                                                                         \
+    return returnResult(#X, __FILE__, __LINE__)
 
 typedef int AIUResultCode;
 
@@ -55,4 +59,3 @@ const char *AIUGetRequestString(AIURequestCode code);
 typedef int AIUResponseCode;
 
 #endif /* AIUNITE_PROTOCOL_H */
-

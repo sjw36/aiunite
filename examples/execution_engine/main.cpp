@@ -34,7 +34,7 @@ int main(int argc, char **argv) {
     llvm::SourceMgr sourceMgr;
     sourceMgr.AddNewSourceBuffer(std::move(file), llvm::SMLoc());
     mlir::OwningOpRef<mlir::ModuleOp> moduleRef =
-      mlir::parseSourceFile<mlir::ModuleOp>(sourceMgr, &context);
+        mlir::parseSourceFile<mlir::ModuleOp>(sourceMgr, &context);
     if (!moduleRef) {
       llvm::errs() << "Parse host harness " << argv[0] << " failed.\n";
       exit(1);
@@ -49,9 +49,9 @@ int main(int argc, char **argv) {
     //   %1 = tosa.add(%arg3, %0)
     //   return %1
     // }
-    
+
     AIU_CHECK_SUCCESS(AIUCreateModel("test", &model));
-    
+
     int64_t t0dims[4] = {128, 32, 32, 8};
     int64_t t1dims[4] = {128, 3, 3, 8};
     int64_t t2dims[1] = {128};
@@ -78,18 +78,22 @@ int main(int argc, char **argv) {
     int64_t dilation[] = {1, 1};
     int64_t stride[] = {1, 1};
     int64_t pad[] = {0, 0, 0, 0};
-    AIU_CHECK_SUCCESS(AIUMakeArrayAttr(model, AIU_DILATION_ATTR, 2, dilation, &attrs[0]));
-    AIU_CHECK_SUCCESS(AIUMakeArrayAttr(model, AIU_STRIDE_ATTR, 2, stride, &attrs[1]));
+    AIU_CHECK_SUCCESS(
+        AIUMakeArrayAttr(model, AIU_DILATION_ATTR, 2, dilation, &attrs[0]));
+    AIU_CHECK_SUCCESS(
+        AIUMakeArrayAttr(model, AIU_STRIDE_ATTR, 2, stride, &attrs[1]));
     AIU_CHECK_SUCCESS(AIUMakeArrayAttr(model, AIU_PAD_ATTR, 4, pad, &attrs[2]));
     // make conv2d
     AIUValue convResult;
     AIUValue params[] = {param0, param1, cstRes};
-    AIU_CHECK_SUCCESS(AIUAddOperationWithAttrs(model, AIU_CONV2D, 3, params, 3, attrs, t3type, &convResult));
+    AIU_CHECK_SUCCESS(AIUAddOperationWithAttrs(model, AIU_CONV2D, 3, params, 3,
+                                               attrs, t3type, &convResult));
 
     // make add
     AIUValue addResult;
     AIUValue addParams[] = {param2, convResult};
-    AIU_CHECK_SUCCESS(AIUAddOperation(model, AIU_ADD, 2, addParams, t3type, &addResult));
+    AIU_CHECK_SUCCESS(
+        AIUAddOperation(model, AIU_ADD, 2, addParams, t3type, &addResult));
 
     // make return
     AIU_CHECK_SUCCESS(AIUSetReturn(model, addResult));

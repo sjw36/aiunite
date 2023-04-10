@@ -11,22 +11,36 @@
 #include <llvm/Support/SourceMgr.h>
 
 #include <string>
+#include <unordered_map>
 
 AIUResponseCode service_cb(AIURequest request, AIUSolution solution) {
 
-  MlirModule c_mod = AIUGetModule(request);
-  mlir::ModuleOp mod = unwrap(c_mod);
+  static std::unordered_map<std::string, mlir::ModuleOp> md5Map;
   // mod.dump();
 
   switch (AIUGetRequestCode(request)) {
-  case AIU_REQUEST_GET:
+  case AIU_REQUEST_GET: {
     // lookup or compile
-    AIUSetModule(solution, c_mod);
+    std::string md5 = AIUGetMD5(request);
+    auto lu = md5Map.find(md5);
+    mlir::ModuleOp mod;
+
+    if (!md5.empty()) {
+      if (lu != md5Map.end()) {
+        mod = lu->second;
+      } else {
+        mod = unwrap(AIUGetModule(request));
+        md5Map[md5] = mod;
+      }
+    } else {
+      mod = unwrap(AIUGetModule(request));
+    }
+    AIUSendModule(solution, wrap(mod));
     break;
+  }
   case AIU_REQUEST_TUNE:
     break;
   case AIU_REQUEST_PARTITION:
-    AIUSetModule(solution, c_mod);
     break;
   }
 

@@ -12,21 +12,17 @@
 #include <aiunite/client.h>
 #include <aiunite/internal/support.h>
 
-
 /******************************************************************************/
 /*  SOLUTION SPEC                                                             */
 /******************************************************************************/
 
 /* -- Generated kernels and call graph */
-extern "C" AIUResultCode
-AIUGetObject(AIUSolution solution, AIUModel kernel, AIUBinary *result) {
-  
+extern "C" AIUResultCode AIUGetObject(AIUSolution solution, AIUModel kernel,
+                                      AIUBinary *result) {
+
   return AIU_FAILURE;
 }
 /*   - EGraph */
 /*   - Binary(s) */
 
 /* -- Tuning space */
-
-
-
