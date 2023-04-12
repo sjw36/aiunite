@@ -7,6 +7,7 @@
 #define AIUNITE_BUILD_H
 
 #include <aiunite/protocol.h>
+#include <aiunite/types.h>
 
 #include <mlir-c/IR.h>
 
