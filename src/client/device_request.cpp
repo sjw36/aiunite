@@ -66,6 +66,8 @@ static std::string getMD5SUM(const std::string &data) {
   std::string result;
   boost::algorithm::hex(charDigest, charDigest + sizeof(md5::digest_type),
                         std::back_inserter(result));
+
+  AIU_LOG_INFO << "MD5: " << result;
   return result;
 }
 
@@ -83,6 +85,10 @@ struct _AIUDeviceRequest {
         status(AIU_SUCCESS) {
     // if (!stream)
     //   status = AIU_FAILURE;
+  }
+
+  ~_AIUDeviceRequest() {
+    AIU_LOG_FUNC(~_AIUDeviceRequest);
   }
 
   AIUResultCode send(AIURequestCode code, const std::string &data) {
@@ -128,6 +134,7 @@ struct _AIUDeviceRequest {
       // Write the message to standard out
       AIU_LOG_DBG << "AIUDeviceRequest::recv: " << res;
 
+      // TODO: defer until all comms are complete
       // Gracefully close the socket
       beast::error_code ec;
       stream.socket().shutdown(tcp::socket::shutdown_both, ec);
@@ -234,7 +241,7 @@ struct _AIURequest {
 
 extern "C" AIUResultCode AIUSendModel(AIUModel model_, AIURequestCode code_,
                                       AIURequest *result_) {
-  AIU_LOG(AIUSendModel);
+  AIU_LOG_FUNC(AIUSendModel);
   AIU_CHECK_OBJECT(model_);
   AIU_CHECK_RESULT(result_);
 
@@ -244,7 +251,7 @@ extern "C" AIUResultCode AIUSendModel(AIUModel model_, AIURequestCode code_,
 // with provider?
 
 extern "C" AIUResultCode AIUGetRequestStatus(AIURequest request_, int64_t *count_) {
-  AIU_LOG(AIURecvSolution);
+  AIU_LOG_FUNC(AIURecvSolution);
 
   AIU_CHECK_OBJECT(request_);
   //request_->query();
@@ -252,7 +259,7 @@ extern "C" AIUResultCode AIUGetRequestStatus(AIURequest request_, int64_t *count
   return AIU_SUCCESS;
 }
 extern "C" AIUResultCode AIURecvSolutions(AIURequest request_) {
-  AIU_LOG(AIURecvSolutions);
+  AIU_LOG_FUNC(AIURecvSolutions);
 
   AIU_CHECK_OBJECT(request_);
   request_->recvAll();
@@ -261,7 +268,7 @@ extern "C" AIUResultCode AIURecvSolutions(AIURequest request_) {
 }
 
 extern "C" AIUResultCode AIURecvSolution(AIURequest request_, AIUSolution *result_) {
-  AIU_LOG(AIURecvSolution);
+  AIU_LOG_FUNC(AIURecvSolution);
 
   AIU_CHECK_OBJECT(request_);
   request_->recvAll();

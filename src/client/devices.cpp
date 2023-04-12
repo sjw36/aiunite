@@ -10,7 +10,7 @@
 #include <_aiu/logger.h>
 
 extern "C" AIUResultCode AIUInitialize() {
-  AIU_LOG(AIUInitialize);
+  AIU_LOG_FUNC(AIUInitialize);
 
   // static: find devices in system
   AIUDevices::get();
@@ -19,7 +19,7 @@ extern "C" AIUResultCode AIUInitialize() {
 }
 
 extern "C" AIUResultCode AIUGetDevice(int64_t index, AIUDevice *result) {
-  AIU_LOG(AIUGetDevice);
+  AIU_LOG_FUNC(AIUGetDevice);
   AIU_CHECK_RESULT(result);
 
   *result = AIUDevices::get().get(index);
@@ -28,7 +28,7 @@ extern "C" AIUResultCode AIUGetDevice(int64_t index, AIUDevice *result) {
 
 extern "C" AIUResultCode AIUGetDeviceByType(AIUDeviceType type,
                                             AIUDevice *result) {
-  AIU_LOG(AIUGetDeviceByType);
+  AIU_LOG_FUNC(AIUGetDeviceByType);
   AIU_CHECK_RESULT(result);
 
   *result = AIUDevices::get().lookup(type);
@@ -39,6 +39,6 @@ extern "C" AIUResultCode AIUGetDeviceInfo(AIUDevice device, AIUDeviceInfo prop,
                                           int64_t prop_value_size,
                                           void *prop_value,
                                           int64_t *prop_value_size_ret) {
-  AIU_LOG(AIUGetDeviceInfo);
+  AIU_LOG_FUNC(AIUGetDeviceInfo);
   return AIU_SUCCESS;
 }

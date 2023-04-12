@@ -178,6 +178,7 @@ makeErrorResponse(http::status status_, uint32_t version,
   res.keep_alive(false); // keep_alive);
   res.body() = msg;
   res.prepare_payload();
+  AIU_LOG_ERROR << "RESPONSE: " << res;
   return res;
 }
 
@@ -189,9 +190,10 @@ template <class Body, class Allocator, class Send>
 void handle_request(beast::string_view doc_root, AIUCallBack callback,
                     http::request<Body, http::basic_fields<Allocator>> &&req,
                     Send &&send) {
+  AIU_LOG_FUNC(handle_request);
   static std::string api_version = AIUNITE_VERSION_STR;
 
-  std::cout << "REQUEST: " << req << std::endl;
+  AIU_LOG_DBG << "REQUEST: " << req;
 
   // Returns a bad request response
   auto const bad_request = [&req](beast::string_view why) {
@@ -238,10 +240,13 @@ void handle_request(beast::string_view doc_root, AIUCallBack callback,
 
   _AIUSolution aiu_sol;
 
-  AIUResponseCode res_code = (*callback)(&aiu_req, &aiu_sol);
-  if (res_code != AIU_RESPONSE_SUCCESS || aiu_sol.getCode()) {
-    const char *msg = "Generator failure";
-    return send(server_error(msg));
+  {
+    AIU_LOG_FUNC(ServiceCallback);
+    AIUResponseCode res_code = (*callback)(&aiu_req, &aiu_sol);
+    if (res_code != AIU_RESPONSE_SUCCESS || aiu_sol.getCode()) {
+      const char *msg = "Generator failure";
+      return send(server_error(msg));
+    }
   }
 
   //////////////////////////////////////////////////////////////////////////
@@ -255,6 +260,8 @@ void handle_request(beast::string_view doc_root, AIUCallBack callback,
   res.content_length(aiu_sol.get().size());
   res.body() = aiu_sol.get();
   res.keep_alive(req.keep_alive());
+
+  AIU_LOG_DBG << "RESPONSE: " << res;
   return send(std::move(res));
 }
 
@@ -810,6 +817,7 @@ private:
 //------------------------------------------------------------------------------
 
 extern "C" AIUResultCode AIUCreateService(int port, AIUCallBack callback) {
+  AIU_LOG_FUNC(AIUCreateService);
   const char *host = "0.0.0.0";
   auto const address = net::ip::make_address(host);
   auto const doc_root = std::make_shared<std::string>(".");
@@ -859,17 +867,20 @@ extern "C" AIUResultCode AIUCreateService(int port, AIUCallBack callback) {
 /******************************************************************************/
 
 extern "C" const char *AIUGetMD5(AIURequest request_) {
+  AIU_LOG_FUNC(AIUGetMD5);
   if (request_ == nullptr)
     return nullptr;
   return request_->getMD5().c_str();
 }
 
 extern "C" MlirModule AIUGetModule(AIURequest request_) {
+  AIU_LOG_FUNC(AIUGetModule);
   assert(request_);
   return wrap(request_->get());
 }
 
 extern "C" AIURequestCode AIUGetRequestCode(AIURequest request_) {
+  AIU_LOG_FUNC(AIUGetRequestCode);
   if (request_ == nullptr)
     return AIU_REQUEST_TUNE;
   return request_->getCode();
@@ -881,6 +892,7 @@ extern "C" AIURequestCode AIUGetRequestCode(AIURequest request_) {
 
 extern "C" AIUResultCode AIUSendModule(AIUSolution solution_,
                                        MlirModule module_) {
+  AIU_LOG_FUNC(AIUSendModule);
   AIU_CHECK_OBJECT(solution_);
   solution_->setResult(0, unwrap(module_));
   return AIU_SUCCESS;

@@ -9,20 +9,14 @@
 #include <aiunite/client.h>
 #include <_aiu/client/model.h>
 #include <_aiu/support.h>
-
-/******************************************************************************/
-/*  REGISTRY MGMT                                                             */
-/******************************************************************************/
-
-extern "C" AIUResultCode AIUReadRegistry(const char *filename) {
-  return AIU_FAILURE;
-}
+#include <_aiu/logger.h>
 
 /******************************************************************************/
 /*  PROBLEM SPEC                                                              */
 /******************************************************************************/
 
 extern "C" AIUResultCode AIUCreateModel(const char *name_, AIUModel *result_) {
+  AIU_LOG_FUNC(AIUCreateModel);
   AIU_CHECK_OBJECT(name_);
   AIU_CHECK_RESULT(result_);
 
@@ -31,11 +25,13 @@ extern "C" AIUResultCode AIUCreateModel(const char *name_, AIUModel *result_) {
 }
 
 extern "C" AIUResultCode AIUDestroyModel(AIUModel func_) {
+  AIU_LOG_FUNC(AIUDestroyModel);
   delete func_;
   return AIU_SUCCESS;
 }
 
 extern "C" AIUResultCode AIUPrintModel(AIUModel model_, const char **result_) {
+  AIU_LOG_FUNC(AIUPrintModel);
   AIU_CHECK_OBJECT(model_);
   AIU_CHECK_RESULT(result_);
   *result_ = model_->print().c_str();
@@ -87,6 +83,7 @@ mlir::Type getMLIRType(AIUModel model_, AIUTypeEnum elemType_) {
 
 extern "C" AIUResultCode AIUGetType(AIUModel model_, AIUTypeEnum elemType_,
                                     AIUType *result_) {
+  AIU_LOG_FUNC(AIUGetType);
   AIU_CHECK_OBJECT(model_);
   AIU_CHECK_RESULT(result_);
   if (mlir::Type etype = getMLIRType(model_, elemType_)) {
@@ -100,6 +97,7 @@ extern "C" AIUResultCode AIUGetTensorType(AIUModel model_, int64_t dimCnt_,
                                           int64_t dims_[],
                                           AIUTypeEnum elemType_,
                                           AIUType *result_) {
+  AIU_LOG_FUNC(AIUGetTensorType);
   AIU_CHECK_OBJECT(model_);
   AIU_CHECK_RESULT(result_);
   if (mlir::Type etype = getMLIRType(model_, elemType_)) {
@@ -114,6 +112,7 @@ extern "C" AIUResultCode AIUGetTensorType(AIUModel model_, int64_t dimCnt_,
 /*  - kernel func params */
 extern "C" AIUResultCode AIUAddParameter(AIUModel func_, AIUType paramType_,
                                          AIUValue *result_) {
+  AIU_LOG_FUNC(AIUAddParameter);
   AIU_GET_OBJECT(func);
   AIU_CHECK_OBJECT(paramType_);
   AIU_CHECK_RESULT(result_);
@@ -221,6 +220,7 @@ const char *AIUGetAttrName(AIUAttrEnum attr) {
 /*  - make attribute */
 extern "C" AIUResultCode AIUMakeAttr(AIUModel func_, AIUAttrEnum type_,
                                      void *value_, AIUAttr *result_) {
+  AIU_LOG_FUNC(AIUMakeAttr);
   AIU_CHECK_OBJECT(func_);
   AIU_CHECK_RESULT(result_);
 
@@ -308,6 +308,7 @@ static llvm::ArrayRef<T> getARef(void *vals_, int64_t cnt_) {
 extern "C" AIUResultCode AIUMakeArrayAttr(AIUModel func_, AIUAttrEnum type_,
                                           int64_t valCnt_, void *value_,
                                           AIUAttr *result_) {
+  AIU_LOG_FUNC(AIUMakeArrayAttr);
   AIU_CHECK_OBJECT(func_);
   AIU_CHECK_RESULT(result_);
 
@@ -352,6 +353,7 @@ extern "C" AIUResultCode AIUMakeArrayAttr(AIUModel func_, AIUAttrEnum type_,
 /*  - add constant */
 extern "C" AIUResultCode AIUAddConstant(AIUModel func_, AIUType resType_,
                                         void *value_, AIUValue *result_) {
+  AIU_LOG_FUNC(AIUAddConstant);
   AIU_CHECK_OBJECT(func_);
   AIU_GET_OBJECT(resType);
   AIU_CHECK_RESULT(result_);
@@ -385,6 +387,7 @@ extern "C" AIUResultCode AIUAddConstant(AIUModel func_, AIUType resType_,
 /*  - add constant */
 extern "C" AIUResultCode AIUAddConstantSplat(AIUModel func_, AIUType resType_,
                                              void *value_, AIUValue *result_) {
+  AIU_LOG_FUNC(AIUAddConstantSplat);
   AIU_GET_OBJECT(func);
   AIU_GET_OBJECT(resType);
   AIU_CHECK_RESULT(result_);
@@ -420,6 +423,7 @@ extern "C" AIUResultCode AIUAddOperation(AIUModel func_,
                                          AIUOperationEnum opType_,
                                          int64_t paramCnt_, AIUValue *params_,
                                          AIUType resType_, AIUValue *result_) {
+  AIU_LOG_FUNC(AIUAddOperation);
   AIU_CHECK_OBJECT(func_);
   AIU_CHECK_OBJECT(resType_);
   AIU_CHECK_RESULT(result_);
@@ -443,8 +447,18 @@ extern "C" AIUResultCode AIUAddOperation(AIUModel func_,
     break
 
   switch (opType_) {
+    AIU_2_TOSA(ABS, AbsOp);
     AIU_2_TOSA(ADD, AddOp);
+    AIU_2_TOSA(SUB, SubOp);
     AIU_2_TOSA(MUL, MulOp);
+    AIU_2_TOSA(DIV, DivOp);
+    AIU_2_TOSA(TRANSPOSE, TransposeOp);
+    AIU_2_TOSA(RECIPROCAL, ReciprocalOp);
+    AIU_2_TOSA(EXP, ExpOp);
+    AIU_2_TOSA(POW, PowOp);
+    AIU_2_TOSA(SIGMOID, SigmoidOp);
+    AIU_2_TOSA(TANH, TanhOp);
+    AIU_2_TOSA(RSQRT, RsqrtOp);
   default:
     return AIU_FAILURE; // unknown op
     break;
@@ -459,6 +473,7 @@ extern "C" AIUResultCode
 AIUAddOperationWithAttrs(AIUModel func_, AIUOperationEnum opType_,
                          int64_t paramCnt_, AIUValue *params_, int64_t attrCnt_,
                          AIUAttr *attrs_, AIUType resType_, AIUValue *result_) {
+  AIU_LOG_FUNC(AIUAddOperationWithAttrs);
   AIU_CHECK_OBJECT(func_);
   AIU_CHECK_OBJECT(resType_);
   AIU_CHECK_RESULT(result_);
@@ -495,6 +510,13 @@ AIUAddOperationWithAttrs(AIUModel func_, AIUOperationEnum opType_,
 
   switch (opType_) {
     AIU_2_TOSA_ATTR(CONV2D, Conv2DOp);
+    AIU_2_TOSA_ATTR(CONV3D, Conv3DOp);
+    AIU_2_TOSA_ATTR(DEPTHWISE_CONV2D, DepthwiseConv2DOp);
+    AIU_2_TOSA_ATTR(MATMUL, MatMulOp);
+    AIU_2_TOSA_ATTR(CLAMP, ClampOp);
+    AIU_2_TOSA_ATTR(RESHAPE, ReshapeOp);
+    AIU_2_TOSA_ATTR(MAX_POOL2D, MaxPool2dOp);
+    AIU_2_TOSA_ATTR(AVG_POOL2D, AvgPool2dOp);
   default:
     return AIU_FAILURE;
   }
@@ -505,6 +527,7 @@ AIUAddOperationWithAttrs(AIUModel func_, AIUOperationEnum opType_,
 
 /*  - set return value */
 extern "C" AIUResultCode AIUSetReturn(AIUModel func_, AIUValue retVal_) {
+  AIU_LOG_FUNC(AIUSetReturn);
   AIU_GET_OBJECT(func);
   AIU_GET_OBJECT(retVal);
 
@@ -527,6 +550,7 @@ extern "C" AIUResultCode AIUSetReturn(AIUModel func_, AIUValue retVal_) {
 
 /* 2. Clone Spec */
 extern "C" AIUResultCode AIUCloneModel(MlirOperation func_, AIUModel *result_) {
+  AIU_LOG_FUNC(AIUCloneModel);
   AIU_CHECK_RESULT(result_);
   auto func = llvm::dyn_cast<mlir::func::FuncOp>(*unwrap(func_));
 
@@ -542,5 +566,6 @@ extern "C" AIUResultCode AIUCloneModel(MlirOperation func_, AIUModel *result_) {
 /* 3. Generator Spec */
 extern "C" AIUResultCode AIUGenerateKernel(AIUModel, const char *options_,
                                            AIUModel *result_) {
+  AIU_LOG_FUNC(AIUGenerateKernel);
   return AIU_FAILURE;
 }

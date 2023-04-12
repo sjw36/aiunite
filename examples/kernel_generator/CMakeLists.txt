@@ -10,7 +10,7 @@ llvm_update_compile_flags(aiu-kg)
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 target_link_libraries(aiu-kg
   PRIVATE
-  AIUniteServer
+  AIUniteService
   MLIRCAPIIR
   MLIRFuncDialect
   MLIRTosaDialect
