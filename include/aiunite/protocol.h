@@ -39,14 +39,15 @@ typedef int AIUResultCode;
 typedef int AIUActionCode;
 
 /* REQUEST CODES */
-#define AIU_REQUEST_GET 0
-#define AIU_REQUEST_GET_BEST 1
-#define AIU_REQUEST_GET_NOW 2
-#define AIU_REQUEST_PARTITION 8
-#define AIU_REQUEST_TUNE 16
-#define AIU_REQUEST_BAD -1
 
-typedef int AIURequestCode;
+enum AIURequestCode {
+  AIU_REQUEST_GET,
+  AIU_REQUEST_GET_BEST,
+  AIU_REQUEST_GET_NOW,
+  AIU_REQUEST_PARTITION,
+  AIU_REQUEST_TUNE,
+  AIU_REQUEST_BAD
+};
 
 AIURequestCode AIUGetRequestCode(const char *code);
 

@@ -38,7 +38,7 @@ extern "C" AIUResultCode AIUDestroyModel(AIUModel func_) {
 extern "C" AIUResultCode AIUPrintModel(AIUModel model_, const char **result_) {
   AIU_CHECK_OBJECT(model_);
   AIU_CHECK_RESULT(result_);
-  *result_ = model_->print();
+  *result_ = model_->print().c_str();
   return AIU_SUCCESS;
 }
 
@@ -158,6 +158,8 @@ const char *AIUGetAttrName(AIUAttrEnum attr) {
     return "inverse";
   case AIU_KERNEL_ATTR:
     return "kernel";
+  case AIU_LAYOUT_ATTR:
+    return "layout";
   case AIU_MAX_FP_ATTR:
     return "max_fp";
   case AIU_MAX_INT_ATTR:
@@ -254,6 +256,7 @@ extern "C" AIUResultCode AIUMakeAttr(AIUModel func_, AIUAttrEnum type_,
   case AIU_STRIDE_ATTR:
     return AIU_FAILURE; // array attr
   case AIU_VALUE_ATTR:
+    // Only Const? which is handled by AddConstant
     // attr = ::mlir::ElementsAttr;
     assert(0);
     break;
@@ -272,20 +275,19 @@ extern "C" AIUResultCode AIUMakeAttr(AIUModel func_, AIUAttrEnum type_,
   case AIU_CONFIG_ATTR:
   case AIU_IDENTIFIER_ATTR:
   case AIU_IMPLEMENTATION_ATTRS_ATTR:
+  case AIU_LAYOUT_ATTR:
   case AIU_MODE_ATTR:
     attr = b.getStringAttr(reinterpret_cast<const char *>(value_));
     break;
   case AIU_CONV_QUANTIZATION_INFO_ATTR:
     // attr = mlir::tosa::ConvOpQuantizationAttr;
-    break;
   case AIU_MATMUL_QUANTIZATION_INFO_ATTR:
     // attr = mlir::tosa::MatMulOpQuantizationAttr;
-    break;
   case AIU_PAD_QUANTIZATION_INFO_ATTR:
     // attr = mlir::tosa::PadOpQuantizationAttr;
-    break;
   case AIU_UNARY_QUANTIZATION_INFO_ATTR:
     // attr = mlir::tosa::UnaryOpQuantizationAttr;
+    assert(0); // TODO
     break;
   }
 

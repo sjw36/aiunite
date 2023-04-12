@@ -59,6 +59,7 @@ struct _AIUModel : public _AIUObject<mlir::func::FuncOp> {
 
     auto funcType = b.getFunctionType({}, {});
     _d = b.create<mlir::func::FuncOp>(_loc, name_, funcType);
+    // TODO: make conditional
     _d->setAttr("kernel", b.getUnitAttr());
 
     _block = _d.addEntryBlock();
@@ -108,13 +109,13 @@ struct _AIUModel : public _AIUObject<mlir::func::FuncOp> {
     return mlir::OpBuilder::atBlockEnd(_block);
   }
 
-  const char *print() {
+  const std::string &print() {
     if (_model_str.empty()) {
       llvm::raw_string_ostream os(_model_str);
       mlir::OpPrintingFlags flags;
       _module.print(os, flags.enableDebugInfo().assumeVerified());
     }
-    return _model_str.c_str();
+    return _model_str;
   }
 
 private:

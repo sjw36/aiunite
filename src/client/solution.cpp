@@ -7,22 +7,52 @@
 #include <mlir/CAPI/IR.h>
 #include <mlir/Dialect/Func/IR/FuncOps.h>
 #include <mlir/Dialect/Tosa/IR/TosaOps.h>
+#include <mlir/Dialect/XModel/IR/XModel.h>
 #include <mlir/IR/BuiltinOps.h>
 
 #include <aiunite/client.h>
+#include <aiunite/internal/solution.h>
 #include <aiunite/internal/support.h>
 
 /******************************************************************************/
 /*  SOLUTION SPEC                                                             */
 /******************************************************************************/
+extern "C" AIUResponseCode AIUGetResponseCode(AIUSolution solution_) {
+  AIU_CHECK_OBJECT(solution_);
+  return solution_->getCode();
+}
 
 /* -- Generated kernels and call graph */
-extern "C" AIUResultCode AIUGetObject(AIUSolution solution, AIUModel kernel,
-                                      AIUBinary *result) {
+extern "C" MlirModule AIUGetModule(AIUSolution solution_) {
+  assert(solution_ != nullptr);
+  return wrap(solution_->get());
+}
+
+struct _AIUBinary {
+
+private:
+};
+
+/*   - Binary(s) */
+extern "C" AIUResultCode AIUGetBinary(AIUSolution solution_,
+                                      const char *kernel_name_,
+                                      AIUBinary *result_) {
+  AIU_CHECK_OBJECT(solution_);
+  AIU_CHECK_RESULT(result_);
+
+  return AIU_SUCCESS;
+}
+
+extern "C" AIUResultCode AIUGetObject(AIUBinary bin_, char *buffer_,
+                                      size_t *size_) {
 
   return AIU_FAILURE;
 }
-/*   - EGraph */
-/*   - Binary(s) */
+
+extern "C" AIUResultCode AIUGetLaunchDims(AIUBinary bin_, size_t *global_size_,
+                                          size_t *local_size_) {
+
+  return AIU_FAILURE;
+}
 
 /* -- Tuning space */

@@ -14,6 +14,8 @@
 
 int main(int argc, char **argv) {
 
+  AIU_CHECK_SUCCESS(AIUInitialize());
+
   // must persist for cloned funcs...
   mlir::DialectRegistry registry;
   registry.insert<mlir::func::FuncDialect, mlir::tosa::TosaDialect>();

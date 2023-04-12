@@ -870,7 +870,7 @@ extern "C" MlirModule AIUGetModule(AIURequest request_) {
 
 extern "C" AIURequestCode AIUGetRequestCode(AIURequest request_) {
   if (request_ == nullptr)
-    return AIU_FAILURE;
+    return AIU_REQUEST_TUNE;
   return request_->getCode();
 }
 

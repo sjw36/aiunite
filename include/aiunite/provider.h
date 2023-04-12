@@ -7,6 +7,7 @@
 #define AIUNITE_SERVER_H
 
 #include <aiunite/protocol.h>
+#include <aiunite/types.h>
 
 #include <mlir-c/IR.h>
 
@@ -19,15 +20,6 @@ extern "C" AIUResultCode AIURegister(const char *filename);
 /******************************************************************************/
 /*  SERVICE MGMT                                                              */
 /******************************************************************************/
-
-struct _AIUContext;
-typedef _AIUContext *AIUContext;
-
-struct _AIURequest;
-typedef _AIURequest *AIURequest;
-
-struct _AIUSolution;
-typedef _AIUSolution *AIUSolution;
 
 typedef AIUResponseCode (*AIUCallBack)(AIURequest request,
                                        AIUSolution solution);
