@@ -3,12 +3,11 @@
 /*  Common Pluggable eXchange                                                 */
 /******************************************************************************/
 
-#ifndef AIUNITE_INTERNAL_DEVICES_H
-#define AIUNITE_INTERNAL_DEVICES_H
+#ifndef _AIU_CLIENT_DEVICES_H
+#define _AIU_CLIENT_DEVICES_H
 
-#include <aiunite/client.h>
-#include <aiunite/devices.h>
-#include <aiunite/protocol.h>
+#include <aiunite/common/protocol.h>
+#include <aiunite/common/types.h>
 
 #include <list>
 #include <string>
@@ -46,8 +45,8 @@ public:
   }
 
   size_t size() const;
-  AIUDevice get(int64_t idx) const;
+  AIUDevice get(size_t idx) const;
   AIUDevice lookup(AIUDeviceType t) const;
 };
 
-#endif /* AIUNITE_INTERNAL_DEVICES_H */
+#endif /*  _AIU_CLIENT_DEVICES_H */

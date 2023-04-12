@@ -3,8 +3,8 @@
 /*  Common Pluggable eXchange                                                 */
 /******************************************************************************/
 
-#ifndef AIUNITE_INTERNAL_SUPPORT_H
-#define AIUNITE_INTERNAL_SUPPORT_H
+#ifndef _AIU_SUPPORT_H
+#define _AIU_SUPPORT_H
 
 #define AIU_CHECK_OBJECT(X)                                                    \
   if (X != nullptr)                                                            \
@@ -21,4 +21,4 @@
   else                                                                         \
     return AIU_INVALID_RESULT_PTR
 
-#endif /* AIUNITE_INTERNAL_SUPPORT_H */
+#endif /* _AIU_SUPPORT_H */

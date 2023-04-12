@@ -4,7 +4,7 @@
 /*  AIAPI:  AI Accelerator (Programming) Interface                            */
 /******************************************************************************/
 
-#include <aiunite/internal/logger.h>
+#include <_aiu/logger.h>
 
 #include <boost/log/utility/setup/common_attributes.hpp>
 

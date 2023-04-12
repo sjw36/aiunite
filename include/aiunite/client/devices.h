@@ -3,10 +3,11 @@
 /*  Common Pluggable eXchange                                                 */
 /******************************************************************************/
 
-#ifndef AIUNITE_DEVICES_H
-#define AIUNITE_DEVICES_H
+#ifndef AIUNITE_CLIENT_DEVICES_H
+#define AIUNITE_CLIENT_DEVICES_H
 
-#include <aiunite/types.h>
+#include <aiunite/common/protocol.h>
+#include <aiunite/common/types.h>
 
 /******************************************************************************/
 /*  REGISTRY MGMT                                                             */
@@ -46,4 +47,4 @@ extern "C" AIUResultCode AIUGetDeviceProperties(AIUDevice result,
 AIUDeviceProperty);
 */
 
-#endif /* AIUNITE_DEVICES_H */
+#endif /* AIUNITE_CLIENT_DEVICES_H */

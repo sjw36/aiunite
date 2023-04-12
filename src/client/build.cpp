@@ -7,8 +7,8 @@
 #include <mlir/CAPI/IR.h>
 
 #include <aiunite/client.h>
-#include <aiunite/internal/model.h>
-#include <aiunite/internal/support.h>
+#include <_aiu/client/model.h>
+#include <_aiu/support.h>
 
 /******************************************************************************/
 /*  REGISTRY MGMT                                                             */

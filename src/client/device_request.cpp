@@ -8,10 +8,10 @@
 #include <mlir/Parser/Parser.h>
 
 #include <aiunite/client.h>
-#include <aiunite/internal/devices.h>
-#include <aiunite/internal/model.h>
-#include <aiunite/internal/solution.h>
-#include <aiunite/internal/support.h>
+#include <_aiu/client/devices.h>
+#include <_aiu/client/model.h>
+#include <_aiu/client/solution.h>
+#include <_aiu/support.h>
 
 /******************************************************************************/
 /*  SUBMIT REQUEST, RECEIVE SOLUTION                                          */
@@ -28,7 +28,7 @@
 #include <iostream>
 #include <string>
 
-#include <aiunite/internal/logger.h>
+#include <_aiu/logger.h>
 
 namespace beast = boost::beast; // from <boost/beast.hpp>
 namespace http = beast::http;   // from <boost/beast/http.hpp>
@@ -185,7 +185,7 @@ AIUDevices::AIUDevices() {
 
 size_t AIUDevices::size() const { return device_vec.size() - 1; }
 
-AIUDevice AIUDevices::get(int64_t idx) const {
+AIUDevice AIUDevices::get(size_t idx) const {
   idx++;
   if (idx < device_vec.size())
     return const_cast<AIUDevice>(device_vec[idx]);
@@ -243,16 +243,29 @@ extern "C" AIUResultCode AIUSendModel(AIUModel model_, AIURequestCode code_,
 }
 // with provider?
 
-extern "C" AIUResultCode AIURecvSolution(AIURequest request_,
-                                         AIUSolution *result_) {
+extern "C" AIUResultCode AIUGetRequestStatus(AIURequest request_, int64_t *count_) {
   AIU_LOG(AIURecvSolution);
 
   AIU_CHECK_OBJECT(request_);
-  AIU_CHECK_RESULT(result_);
-
-  request_->recvAll();
-
-  //*result_ = new _AIUSolution();
+  //request_->query();
 
   return AIU_SUCCESS;
 }
+extern "C" AIUResultCode AIURecvSolutions(AIURequest request_) {
+  AIU_LOG(AIURecvSolutions);
+
+  AIU_CHECK_OBJECT(request_);
+  request_->recvAll();
+
+  return AIU_SUCCESS;
+}
+
+extern "C" AIUResultCode AIURecvSolution(AIURequest request_, AIUSolution *result_) {
+  AIU_LOG(AIURecvSolution);
+
+  AIU_CHECK_OBJECT(request_);
+  request_->recvAll();
+
+  return AIU_SUCCESS;
+}
+

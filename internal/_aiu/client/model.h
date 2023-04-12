@@ -3,8 +3,10 @@
 /*  Common Pluggable eXchange                                                 */
 /******************************************************************************/
 
-#ifndef AIUNITE_INTERNAL_MODEL_H
-#define AIUNITE_INTERNAL_MODEL_H
+#ifndef _AIU_CLIENT_MODEL_H
+#define _AIU_CLIENT_MODEL_H
+
+#include <aiunite/common/types.h>
 
 #include <mlir/Dialect/Func/IR/FuncOps.h>
 #include <mlir/Dialect/Tosa/IR/TosaOps.h>
@@ -138,4 +140,4 @@ private:
   std::string _model_str;
 };
 
-#endif /* AIUNITE_INTERNAL_MODEL_H */
+#endif /* _AIU_CLIENT_MODEL_H */

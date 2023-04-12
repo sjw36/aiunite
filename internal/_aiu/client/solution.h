@@ -3,8 +3,8 @@
 /*  Common Pluggable eXchange                                                 */
 /******************************************************************************/
 
-#ifndef AIUNITE_INTERNAL_SOLUTION_H
-#define AIUNITE_INTERNAL_SOLUTION_H
+#ifndef _AIU_CLIENT_SOLUTION_H
+#define _AIU_CLIENT_SOLUTION_H
 
 #include <mlir/Dialect/Func/IR/FuncOps.h>
 #include <mlir/Dialect/Linalg/IR/Linalg.h>
@@ -52,4 +52,4 @@ private:
   mlir::ModuleOp _d;
 };
 
-#endif /* AIUNITE_INTERNAL_SOLUTION_H */
+#endif /* _AIU_CLIENT_SOLUTION_H */

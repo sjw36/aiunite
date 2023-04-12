@@ -3,10 +3,11 @@
 /*  Common Pluggable eXchange                                                 */
 /******************************************************************************/
 
-#ifndef AIUNITE_SOLUTION_H
-#define AIUNITE_SOLUTION_H
+#ifndef AIUNITE_CLIENT_SOLUTION_H
+#define AIUNITE_CLIENT_SOLUTION_H
 
-#include <aiunite/types.h>
+#include <aiunite/common/protocol.h>
+#include <aiunite/common/types.h>
 #include <mlir-c/IR.h>
 
 /******************************************************************************/
@@ -30,4 +31,4 @@ extern "C" AIUResultCode AIUGetObject(AIUBinary bin_, char *buffer_,
 extern "C" AIUResultCode AIUGetLaunchDims(AIUBinary bin_, size_t *global_size_,
                                           size_t *local_size_);
 
-#endif /* AIUNITE_SOLUTION_H */
+#endif /* AIUNITE_CLIENT_SOLUTION_H */

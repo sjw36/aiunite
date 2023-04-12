@@ -3,11 +3,11 @@
 /*  Common Pluggable eXchange                                                 */
 /******************************************************************************/
 
-#ifndef AIUNITE_BUILD_H
-#define AIUNITE_BUILD_H
+#ifndef AIUNITE_CLIENT_BUILD_H
+#define AIUNITE_CLIENT_BUILD_H
 
-#include <aiunite/protocol.h>
-#include <aiunite/types.h>
+#include <aiunite/common/protocol.h>
+#include <aiunite/common/types.h>
 
 #include <mlir-c/IR.h>
 
@@ -199,4 +199,4 @@ extern "C" AIUResultCode AIUCloneModel(MlirOperation kernel, AIUModel *result);
 extern "C" AIUResultCode AIUGenerateModel(const char *options,
                                           AIUModel *result);
 
-#endif /* AIUNITE_BUILD_H */
+#endif /* AIUNITE_CLIENT_BUILD_H */

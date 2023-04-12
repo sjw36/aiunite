@@ -11,19 +11,22 @@
 #include <mlir/IR/BuiltinOps.h>
 
 #include <aiunite/client.h>
-#include <aiunite/internal/solution.h>
-#include <aiunite/internal/support.h>
+#include <_aiu/client/solution.h>
+#include <_aiu/support.h>
+#include <_aiu/logger.h>
 
 /******************************************************************************/
 /*  SOLUTION SPEC                                                             */
 /******************************************************************************/
 extern "C" AIUResponseCode AIUGetResponseCode(AIUSolution solution_) {
+  AIU_LOG(AIUGetResponseCode);
   AIU_CHECK_OBJECT(solution_);
   return solution_->getCode();
 }
 
 /* -- Generated kernels and call graph */
 extern "C" MlirModule AIUGetModule(AIUSolution solution_) {
+  AIU_LOG(AIUGetModule);
   assert(solution_ != nullptr);
   return wrap(solution_->get());
 }
@@ -37,6 +40,7 @@ private:
 extern "C" AIUResultCode AIUGetBinary(AIUSolution solution_,
                                       const char *kernel_name_,
                                       AIUBinary *result_) {
+  AIU_LOG(AIUGetBinary);
   AIU_CHECK_OBJECT(solution_);
   AIU_CHECK_RESULT(result_);
 
@@ -45,12 +49,14 @@ extern "C" AIUResultCode AIUGetBinary(AIUSolution solution_,
 
 extern "C" AIUResultCode AIUGetObject(AIUBinary bin_, char *buffer_,
                                       size_t *size_) {
+  AIU_LOG(AIUGetObject);
 
   return AIU_FAILURE;
 }
 
 extern "C" AIUResultCode AIUGetLaunchDims(AIUBinary bin_, size_t *global_size_,
                                           size_t *local_size_) {
+  AIU_LOG(AIUGetLaunchDims);
 
   return AIU_FAILURE;
 }

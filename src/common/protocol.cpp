@@ -4,7 +4,7 @@
 /*  AIAPI:  AI Accelerator (Programming) Interface                            */
 /******************************************************************************/
 
-#include <aiunite/protocol.h>
+#include <aiunite/common/protocol.h>
 
 extern "C" int returnResult(const char *resultCode, const char *file_name,
                             int line_num) {

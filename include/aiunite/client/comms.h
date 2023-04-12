@@ -3,10 +3,11 @@
 /*  Common Pluggable eXchange                                                 */
 /******************************************************************************/
 
-#ifndef AIUNITE_COMMS_H
-#define AIUNITE_COMMS_H
+#ifndef AIUNITE_CLIENT_COMMS_H
+#define AIUNITE_CLIENT_COMMS_H
 
-#include <aiunite/types.h>
+#include <aiunite/common/protocol.h>
+#include <aiunite/common/types.h>
 
 /******************************************************************************/
 /*  SUBMIT REQUEST, RECEIVE SOLUTION                                          */
@@ -31,4 +32,4 @@ extern "C" AIUResultCode AIURecvSolutionFromDevice(AIURequest request_,
                                                    AIUDevice device_,
                                                    AIUSolution *result_);
 
-#endif /* AIUNITE_COMMS_H */
+#endif /* AIUNITE_CLIENT_COMMS_H */

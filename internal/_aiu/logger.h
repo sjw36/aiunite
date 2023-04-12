@@ -3,8 +3,8 @@
 /*  Common Pluggable eXchange                                                 */
 /******************************************************************************/
 
-#ifndef AIUNITE_INTERNAL_LOGGER_H
-#define AIUNITE_INTERNAL_LOGGER_H
+#ifndef _AIU_CLIENT_LOGGER_H
+#define _AIU_CLIENT_LOGGER_H
 
 #define BOOST_LOG_DYN_LINK 1
 #include <boost/log/core.hpp>
@@ -34,4 +34,4 @@ public:
   }
 };
 
-#endif /* AIUNITE_INTERNAL_LOGGER_H */
+#endif /* _AIU_CLIENT_LOGGER_H */
