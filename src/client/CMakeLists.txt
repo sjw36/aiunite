@@ -1,6 +1,6 @@
 set(LLVM_OPTIONAL_SOURCES
   build.cpp
-  device_request.cpp
+  communication.cpp
   devices.cpp
   solution.cpp
 )
@@ -9,7 +9,7 @@ llvm_add_library(AIUniteClient
 PARTIAL_SOURCES_INTENDED
 
   build.cpp
-  device_request.cpp
+  communication.cpp
   devices.cpp
   solution.cpp
 
