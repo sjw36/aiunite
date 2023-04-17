@@ -60,6 +60,11 @@ include(cmake/llvm-project.cmake)
 set(CMAKE_BUILD_RPATH "${AIUNITE_LIB_DIR};${LLVM_EXTERNAL_LIB_DIR}")
 message(STATUS "CMAKE_BUILD_RPATH: ${CMAKE_BUILD_RPATH}")
 
+option(AIU_ENABLE_LOGGING "Enable logging" ON)
+if(AIU_ENABLE_LOGGING)
+  add_compile_definitions(AIU_LOGGING_ENABLED)
+endif()
+
 include_directories(${PROJECT_SOURCE_DIR}/include)
 include_directories(${PROJECT_SOURCE_DIR}/internal)
 

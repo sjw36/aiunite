@@ -28,5 +28,5 @@ PARTIAL_SOURCES_INTENDED
   LINK_COMPONENTS
 )
 
-target_compile_options(AIUniteService PUBLIC -fexceptions)
+target_compile_options(AIUniteService PUBLIC -fexceptions -frtti)
 

@@ -178,7 +178,7 @@ makeErrorResponse(http::status status_, uint32_t version,
   res.keep_alive(false); // keep_alive);
   res.body() = msg;
   res.prepare_payload();
-  AIU_LOG_ERROR << "RESPONSE: " << res;
+  AIU_LOG_ERROR("RESPONSE: " << res);
   return res;
 }
 
@@ -193,7 +193,7 @@ void handle_request(beast::string_view doc_root, AIUCallBack callback,
   AIU_LOG_FUNC(handle_request);
   static std::string api_version = AIUNITE_VERSION_STR;
 
-  AIU_LOG_DBG << "REQUEST: " << req;
+  AIU_LOG_DBG("REQUEST: " << req);
 
   // Returns a bad request response
   auto const bad_request = [&req](beast::string_view why) {
@@ -261,7 +261,7 @@ void handle_request(beast::string_view doc_root, AIUCallBack callback,
   res.body() = aiu_sol.get();
   res.keep_alive(req.keep_alive());
 
-  AIU_LOG_DBG << "RESPONSE: " << res;
+  AIU_LOG_DBG("RESPONSE: " << res);
   return send(std::move(res));
 }
 

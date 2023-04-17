@@ -54,7 +54,7 @@ _AIUSolution::_AIUSolution(AIUDevice dev, const std::string &body)
   if (moduleRef) {
     _d = moduleRef.release();
     _code = AIU_SOLUTION_SUCCESS;
-    AIU_LOG_DBG << _d;
+    AIU_LOG_DBG(_d);
   } else {
     _code = AIU_SOLUTION_INVALID_MODEL;
   }
@@ -77,7 +77,7 @@ AIUBinary _AIUSolution::getBinary(const char *func_name_) {
         auto obj = pkgAttr.getObject();
         auto bin = new _AIUBinary(_device, obj.getBinary(), dims);
         _binaries[func_name_] = bin;
-        AIU_LOG_DBG << "AIUBinary: " << func_name_ << " " << obj.getBinary().size();
+        AIU_LOG_DBG("AIUBinary: " << func_name_ << " " << obj.getBinary().size());
         return bin;
       }
     }

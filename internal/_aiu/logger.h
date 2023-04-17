@@ -16,10 +16,6 @@
 #include <boost/log/utility/setup/common_attributes.hpp>
 #include <boost/log/utility/setup/file.hpp>
 
-#define AIU_LOG_INFO BOOST_LOG_SEV(AIULog::get(), ::boost::log::trivial::info)
-#define AIU_LOG_DBG BOOST_LOG_SEV(AIULog::get(), ::boost::log::trivial::debug)
-#define AIU_LOG_ERROR BOOST_LOG_SEV(AIULog::get(), ::boost::log::trivial::error)
-
 class AIULog : public ::boost::log::sources::severity_logger<
                    ::boost::log::trivial::severity_level> {
   AIULog();
@@ -46,7 +42,17 @@ public:
   };
 };
 
+#ifdef AIU_LOGGING_ENABLED
+#define AIU_LOG_INFO(X) BOOST_LOG_SEV(AIULog::get(), ::boost::log::trivial::info) << X
+#define AIU_LOG_DBG(X) BOOST_LOG_SEV(AIULog::get(), ::boost::log::trivial::debug) << X
+#define AIU_LOG_ERROR(X) BOOST_LOG_SEV(AIULog::get(), ::boost::log::trivial::error) << X
 #define AIU_LOG_FUNC(X) AIULog::FuncTrace _AIU_LOG_FUNC_TRACE(#X)
 //#define AIU_LOG1(X,ARGS...) AIULog::FuncTrace _AIU_LOG_FUNC_TRACE(#X, ARGS)
+#else
+#define AIU_LOG_INFO(X)
+#define AIU_LOG_DBG(X)
+#define AIU_LOG_ERROR(X)
+#define AIU_LOG_FUNC(X)
+#endif
 
 #endif /* _AIU_LOGGER_H */

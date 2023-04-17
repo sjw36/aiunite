@@ -57,8 +57,8 @@ static auto getStream(const std::string &host, const std::string &port,
   *status = AIU_STREAM_STATUS_UP;
   
   beast::tcp_stream stream(ioc);
-  AIU_LOG_INFO << "AIUDeviceRequest::setup: " << host << ", " << port
-               << std::endl;
+  AIU_LOG_INFO("AIUDeviceRequest::setup: " << host << ", " << port
+               << std::endl);
   try {
     auto const results = resolver.resolve(host.c_str(), port.c_str());
 
@@ -66,7 +66,7 @@ static auto getStream(const std::string &host, const std::string &port,
     stream.connect(results);
 
   } catch (std::exception const &e) {
-    AIU_LOG_ERROR << "AIUDeviceRequest::setup: " << e.what();
+    AIU_LOG_ERROR("AIUDeviceRequest::setup: " << e.what());
     *status = AIU_STREAM_STATUS_FAIL;
   }
 
@@ -86,7 +86,7 @@ static std::string getMD5SUM(const std::string &data) {
   boost::algorithm::hex(charDigest, charDigest + sizeof(md5::digest_type),
                         std::back_inserter(result));
 
-  AIU_LOG_INFO << "MD5: " << result;
+  AIU_LOG_INFO("MD5: " << result);
   return result;
 }
 
@@ -138,7 +138,7 @@ struct _AIUDeviceRequest {
         req.content_length(data.size());
         req.body() = data;
 
-        AIU_LOG_INFO << "AIUDeviceRequest::send: " << req;
+        AIU_LOG_INFO("AIUDeviceRequest::send: " << req);
 
         // Send the HTTP request to the remote host
         http::write(stream, req);
@@ -146,7 +146,7 @@ struct _AIUDeviceRequest {
         request_status = AIU_REQUEST_STATUS_SENT;
         status = AIU_SUCCESS;
       } catch (std::exception const &e) {
-        AIU_LOG_ERROR << "AIUDeviceRequest::send: " << e.what();
+        AIU_LOG_ERROR("AIUDeviceRequest::send: " << e.what());
         request_status = AIU_REQUEST_STATUS_FAIL;
       }
     }
@@ -167,7 +167,7 @@ struct _AIUDeviceRequest {
         http::read(stream, buffer, res);
 
         // Write the message to standard out
-        AIU_LOG_DBG << "AIUDeviceRequest::recv: " << res;
+        AIU_LOG_DBG("AIUDeviceRequest::recv: " << res);
 
         // TODO: defer until all comms are complete
         // Gracefully close the socket
@@ -177,7 +177,7 @@ struct _AIUDeviceRequest {
         request_status = AIU_REQUEST_STATUS_RECV;
         status = AIU_SUCCESS;
       } catch (std::exception const &e) {
-        AIU_LOG_ERROR << "AIUDeviceRequest::recv: " << e.what();
+        AIU_LOG_ERROR("AIUDeviceRequest::recv: " << e.what());
         request_status = AIU_REQUEST_STATUS_FAIL;
         return status;
       }
@@ -224,14 +224,14 @@ AIUDevices::AIUDevices() {
   // add non-device
   device_vec.push_back(new _AIUDevice("", "", "", AIU_DEVICE_TYPE_NONE));
   const char *etc_path = "/etc/aiunite";
-  AIU_LOG_INFO << "AIUDevices in: " << etc_path;
+  AIU_LOG_INFO("AIUDevices in: " << etc_path);
   // read /etc/aiunite and add kg for each file
   for (auto fpath : directory_iterator(etc_path)) {
     if (is_regular_file(fpath)) {
       std::string port, host, name, device_type;
       ifstream file(fpath.path());
       file >> port >> host >> name >> device_type;
-      AIU_LOG_INFO << "AIUDevice: " << host << ", " << port << ", " << name;
+      AIU_LOG_INFO("AIUDevice: " << host << ", " << port << ", " << name);
       device_vec.push_back(
           new _AIUDevice(port, host, name, AIU_DEVICE_TYPE_GPU));
     }
@@ -266,7 +266,7 @@ _AIURequest::_AIURequest(AIUModel model_, AIURequestCode code_) : request_code(c
   device_reqs.reserve(devs.size());
   solutions.reserve(devs.size());
 
-  AIU_LOG_DBG << "AIURequest: " << model_str;
+  AIU_LOG_DBG("AIURequest: " << model_str);
   for (size_t i = 0; i < devs.size(); ++i) {
     device_reqs.push_back(devs.get(i)->sendRequest(code_, model_str));
     solutions.push_back(nullptr);
