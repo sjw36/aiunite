@@ -2,6 +2,7 @@ set(LLVM_OPTIONAL_SOURCES
   build.cpp
   communication.cpp
   devices.cpp
+  model.cpp
   solution.cpp
 )
 
@@ -11,6 +12,7 @@ PARTIAL_SOURCES_INTENDED
   build.cpp
   communication.cpp
   devices.cpp
+  model.cpp
   solution.cpp
 
   LINK_LIBS

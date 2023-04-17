@@ -14,7 +14,7 @@
 /*  SOLUTION GRAPH                                                            */
 /******************************************************************************/
 
-extern "C" AIUResponseCode AIUGetResponseCode(AIUSolution solution_);
+extern "C" AIUSolutionCode AIUGetSolutionCode(AIUSolution solution_);
 
 /* -- Generated kernels and call graph */
 extern "C" MlirModule AIUGetModule(AIUSolution solution_);
@@ -25,10 +25,9 @@ extern "C" AIUResultCode AIUGetBinary(AIUSolution solution_,
                                       const char *kernel_name_,
                                       AIUBinary *result_);
 
-extern "C" AIUResultCode AIUGetObject(AIUBinary bin_, char *buffer_,
-                                      size_t *size_);
+extern "C" AIUResultCode AIUGetObject(AIUBinary bin_, const char **buffer_);
 
-extern "C" AIUResultCode AIUGetLaunchDims(AIUBinary bin_, size_t *global_size_,
-                                          size_t *local_size_);
+extern "C" AIUResultCode AIUGetLaunchDims(AIUBinary bin_, size_t *size_,
+                                          const size_t **dims_);
 
 #endif /* AIUNITE_CLIENT_SOLUTION_H */

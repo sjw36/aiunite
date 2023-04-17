@@ -36,20 +36,38 @@ namespace http = beast::http;   // from <boost/beast/http.hpp>
 namespace net = boost::asio;    // from <boost/asio.hpp>
 using tcp = net::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
 
-static auto getStream(const char *host, const char *port) {
+enum AIUStreamStatus {
+    AIU_STREAM_STATUS_UP,
+    AIU_STREAM_STATUS_DOWN,
+    AIU_STREAM_STATUS_FAIL
+};
+
+enum AIURequestStatus {
+    AIU_REQUEST_STATUS_INIT,
+    AIU_REQUEST_STATUS_SENT,
+    AIU_REQUEST_STATUS_RECV,
+    AIU_REQUEST_STATUS_FAIL
+};
+
+static auto getStream(const std::string &host, const std::string &port,
+                      AIUStreamStatus *status) {
   static boost::asio::io_context ioc;
   static boost::asio::ip::tcp::resolver resolver(ioc);
 
+  *status = AIU_STREAM_STATUS_UP;
+  
   beast::tcp_stream stream(ioc);
   AIU_LOG_INFO << "AIUDeviceRequest::setup: " << host << ", " << port
                << std::endl;
   try {
-    auto const results = resolver.resolve(host, port);
+    auto const results = resolver.resolve(host.c_str(), port.c_str());
 
     // Make the connection on the IP address we get from a lookup
     stream.connect(results);
+
   } catch (std::exception const &e) {
     AIU_LOG_ERROR << "AIUDeviceRequest::setup: " << e.what();
+    *status = AIU_STREAM_STATUS_FAIL;
   }
 
   return stream;
@@ -73,27 +91,36 @@ static std::string getMD5SUM(const std::string &data) {
 }
 
 struct _AIUDeviceRequest {
-  AIUDevice device;
-  // The io_context is required for all I/O
-  beast::tcp_stream stream;
-  beast::flat_buffer buffer;
-  std::string result;
-  AIUResultCode status;
-
   _AIUDeviceRequest(AIUDevice _d)
       : device(_d),
-        stream(getStream(device->getHost().c_str(), device->getPort().c_str())),
-        status(AIU_SUCCESS) {
-    // if (!stream)
-    //   status = AIU_FAILURE;
+        stream(getStream(device->getHost(), device->getPort(), &stream_status)),
+        request_status(AIU_REQUEST_STATUS_INIT)
+  {
+    if (stream_status != AIU_STREAM_STATUS_UP) {
+      request_status = AIU_REQUEST_STATUS_FAIL;
+    }
   }
 
   ~_AIUDeviceRequest() {
     AIU_LOG_FUNC(~_AIUDeviceRequest);
   }
 
+  AIUDevice getDevice() const {
+    return device;
+  }
+  const std::string &getResult() const {
+    return result;
+  }
+  AIURequestStatus getRequestStatus() const {
+    return request_status;
+  }
+
   AIUResultCode send(AIURequestCode code, const std::string &data) {
-    if (status == AIU_SUCCESS) {
+    if (request_status != AIU_REQUEST_STATUS_INIT) {
+      return request_status != AIU_REQUEST_STATUS_FAIL ? AIU_SUCCESS : AIU_FAILURE;
+    }
+    AIUResultCode status = AIU_FAILURE;
+    if (stream_status == AIU_STREAM_STATUS_UP) {
       std::string md5sum = getMD5SUM(data);
 
       const char *target = "/foo";
@@ -116,39 +143,59 @@ struct _AIUDeviceRequest {
         // Send the HTTP request to the remote host
         http::write(stream, req);
 
+        request_status = AIU_REQUEST_STATUS_SENT;
+        status = AIU_SUCCESS;
       } catch (std::exception const &e) {
         AIU_LOG_ERROR << "AIUDeviceRequest::send: " << e.what();
-        status = AIU_FAILURE;
+        request_status = AIU_REQUEST_STATUS_FAIL;
       }
     }
     return status;
   }
 
   AIUResultCode recv() {
-    // Declare a container to hold the response
-    http::response<http::dynamic_body> res;
+    if (request_status > AIU_REQUEST_STATUS_SENT) {
+      return request_status != AIU_REQUEST_STATUS_FAIL ? AIU_SUCCESS : AIU_FAILURE;
+    }
+    AIUResultCode status = AIU_FAILURE;
+    if (stream_status == AIU_STREAM_STATUS_UP) {
+      // Declare a container to hold the response
+      http::response<http::dynamic_body> res;
 
-    try {
-      // Receive the HTTP response
-      http::read(stream, buffer, res);
+      try {
+        // Receive the HTTP response
+        http::read(stream, buffer, res);
 
-      // Write the message to standard out
-      AIU_LOG_DBG << "AIUDeviceRequest::recv: " << res;
+        // Write the message to standard out
+        AIU_LOG_DBG << "AIUDeviceRequest::recv: " << res;
 
-      // TODO: defer until all comms are complete
-      // Gracefully close the socket
-      beast::error_code ec;
-      stream.socket().shutdown(tcp::socket::shutdown_both, ec);
+        // TODO: defer until all comms are complete
+        // Gracefully close the socket
+        beast::error_code ec;
+        stream.socket().shutdown(tcp::socket::shutdown_both, ec);
 
-    } catch (std::exception const &e) {
-      AIU_LOG_ERROR << "AIUDeviceRequest::recv: " << e.what();
-      return AIU_FAILURE;
+        request_status = AIU_REQUEST_STATUS_RECV;
+        status = AIU_SUCCESS;
+      } catch (std::exception const &e) {
+        AIU_LOG_ERROR << "AIUDeviceRequest::recv: " << e.what();
+        request_status = AIU_REQUEST_STATUS_FAIL;
+        return status;
+      }
+
+      result = boost::beast::buffers_to_string(res.body().data());
     }
 
-    std::string body = boost::beast::buffers_to_string(res.body().data());
-
-    return AIU_SUCCESS;
+    return status;
   }
+
+private:
+  AIUDevice device;
+  // The io_context is required for all I/O
+  beast::tcp_stream stream;
+  beast::flat_buffer buffer;
+  std::string result;
+  AIUStreamStatus stream_status;
+  AIURequestStatus request_status;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -217,10 +264,12 @@ _AIURequest::_AIURequest(AIUModel model_, AIURequestCode code_) : request_code(c
   auto devs = AIUDevices::get();
 
   device_reqs.reserve(devs.size());
+  solutions.reserve(devs.size());
 
   AIU_LOG_DBG << "AIURequest: " << model_str;
   for (size_t i = 0; i < devs.size(); ++i) {
     device_reqs.push_back(devs.get(i)->sendRequest(code_, model_str));
+    solutions.push_back(nullptr);
   }
 }
 
@@ -230,12 +279,34 @@ _AIURequest::~_AIURequest() {
   }
 }
 
-void _AIURequest::recvAll() {
-  for (auto req : device_reqs) {
-    req->recv();
+AIUSolution _AIURequest::recv(size_t index) {
+  assert(index < device_reqs.size());
+  if (solutions[index] == nullptr) {
+    if (device_reqs[index]->recv() == AIU_SUCCESS) {
+      auto devs = AIUDevices::get();
+      solutions[index] = new _AIUSolution(devs.get(index), device_reqs[index]->getResult());
+    }
   }
+  return solutions[index];
 }
 
+AIUSolution _AIURequest::recv(AIUDevice dev) {
+  for (size_t i = 0; i < device_reqs.size(); ++i) {
+    auto req = device_reqs[i];
+    if (req->getDevice() == dev)
+      return recv(i);
+  }
+  return nullptr;
+}
+
+void _AIURequest::recvAll() {
+  for (size_t i = 0; i < device_reqs.size(); ++i)
+    recv(i);
+}
+
+/******************************************************************************/
+/*  SUBMIT REQUEST, GET SOLUTIONS                                             */
+/******************************************************************************/
 extern "C" AIUResultCode AIUSendModel(AIUModel model_, AIURequestCode code_,
                                       AIURequest *result_) {
   AIU_LOG_FUNC(AIUSendModel);
@@ -245,7 +316,7 @@ extern "C" AIUResultCode AIUSendModel(AIUModel model_, AIURequestCode code_,
   *result_ = new _AIURequest(model_, code_);
   return AIU_SUCCESS;
 }
-// with provider?
+
 
 extern "C" AIUResultCode AIUGetRequestCount(AIURequest request_, int64_t *result_) {
   AIU_LOG_FUNC(AIUGetRequestCount);
@@ -265,8 +336,9 @@ extern "C" AIUResultCode AIUGetRequestStatus(AIURequest request_, int64_t *count
 
   return AIU_SUCCESS;
 }
+
 extern "C" AIUResultCode AIURecvSolutions(AIURequest request_) {
-  AIU_LOG_FUNC(AIURecvSolutions);
+  AIU_LOG_FUNC(AIUGetSolutions);
 
   AIU_CHECK_OBJECT(request_);
   request_->recvAll();
@@ -274,12 +346,23 @@ extern "C" AIUResultCode AIURecvSolutions(AIURequest request_) {
   return AIU_SUCCESS;
 }
 
-extern "C" AIUResultCode AIURecvSolution(AIURequest request_, size_t index_, AIUSolution *result_) {
-  AIU_LOG_FUNC(AIURecvSolution);
+extern "C" AIUResultCode AIUGetSolution(AIURequest request_, size_t index_,
+                                         AIUSolution *result_) {
+  AIU_LOG_FUNC(AIUGetSolution);
 
   AIU_CHECK_OBJECT(request_);
-  request_->recvAll();
+  *result_ = request_->recv(index_);
 
   return AIU_SUCCESS;
 }
 
+extern "C" AIUResultCode AIUGetSolutionFromDevice(AIURequest request_,
+                                                  AIUDevice device_,
+                                                  AIUSolution *result_) {
+  AIU_LOG_FUNC(AIUGetSolution);
+
+  AIU_CHECK_OBJECT(request_);
+  *result_ = request_->recv(device_);
+
+  return AIU_SUCCESS;
+}

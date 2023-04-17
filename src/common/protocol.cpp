@@ -21,8 +21,9 @@ extern "C" int returnResult(const char *resultCode, const char *file_name,
 
 AIURequestCode AIUGetRequestCode(const char *code) {
   if (code && *code) {
+    AIU_REQUEST_TEST_STRING(code, LOOKUP);
     AIU_REQUEST_TEST_STRING(code, GET);
-    AIU_REQUEST_TEST_STRING(code, GET_NOW);
+    AIU_REQUEST_TEST_STRING(code, GET_BEST);
     AIU_REQUEST_TEST_STRING(code, PARTITION);
     AIU_REQUEST_TEST_STRING(code, TUNE);
   }
@@ -35,8 +36,9 @@ AIURequestCode AIUGetRequestCode(const char *code) {
 
 const char *AIUGetRequestString(AIURequestCode code) {
   switch (code) {
+    AIU_REQUEST_TEST_CODE(LOOKUP);
     AIU_REQUEST_TEST_CODE(GET);
-    AIU_REQUEST_TEST_CODE(GET_NOW);
+    AIU_REQUEST_TEST_CODE(GET_BEST);
     AIU_REQUEST_TEST_CODE(PARTITION);
     AIU_REQUEST_TEST_CODE(TUNE);
   }

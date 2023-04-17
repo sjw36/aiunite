@@ -14,6 +14,8 @@
 
 int main(int argc, char **argv) {
 
+  std::string func_name = "aiunite_test";
+
   AIU_CHECK_SUCCESS(AIUInitialize());
 
   // must persist for cloned funcs...
@@ -43,7 +45,10 @@ int main(int argc, char **argv) {
     }
     mlir::ModuleOp module = moduleRef.release();
     module.walk(
-        [&](mlir::func::FuncOp f) { AIUCloneModel(wrap(&*f), &model); });
+        [&](mlir::func::FuncOp f) {
+          func_name = f.getName().str();
+          AIUCloneModel(wrap(&*f), &model);
+        });
   } else {
     // func test (%arg0, %arg1, %arg2) -> tensor<xf32> {
     //   %cst = tosa.const <val> : type
@@ -52,7 +57,7 @@ int main(int argc, char **argv) {
     //   return %1
     // }
 
-    AIU_CHECK_SUCCESS(AIUCreateModel("test", &model));
+    AIU_CHECK_SUCCESS(AIUCreateModel(func_name.c_str(), &model));
 
     int64_t t0dims[4] = {128, 32, 32, 8};
     int64_t t1dims[4] = {128, 3, 3, 8};
@@ -106,8 +111,31 @@ int main(int argc, char **argv) {
 
   // do something else...
 
-  AIUSolution solution;
-  AIU_CHECK_SUCCESS(AIURecvSolution(request, &solution));
+  AIUSolution solution; // GPU?
+  AIU_CHECK_SUCCESS(AIUGetSolution(request, 0, &solution));
 
+  // get binary
+  AIUBinary binary;
+  AIU_CHECK_SUCCESS(AIUGetBinary(solution, func_name.c_str(), &binary));
+
+  const char *binobj;
+  AIU_CHECK_SUCCESS(AIUGetObject(binary, &binobj));
+
+  char buf[10];
+  memcpy(buf, binobj, 4);
+  buf[4] = '\0';
+  
+  size_t launch_dims_size;
+  const size_t *launch_dims;
+  AIU_CHECK_SUCCESS(AIUGetLaunchDims(binary, &launch_dims_size, &launch_dims));
+
+  std::cout << "Binary for '" << func_name << "' (";
+  for (size_t i = 0; i < launch_dims_size; ++i) {
+    if (i != 0)
+      std::cout << ",";
+    std::cout << launch_dims[i];
+  }
+  std::cout << ") = " << buf << std::endl;
+  
   return 0;
 }

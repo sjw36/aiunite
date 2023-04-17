@@ -9,9 +9,8 @@
 #include <aiunite/common/types.h>
 
 #include <mlir/Dialect/Func/IR/FuncOps.h>
-#include <mlir/Dialect/Tosa/IR/TosaOps.h>
 #include <mlir/IR/BuiltinOps.h>
-#include <mlir/IR/BuiltinTypes.h>
+//#include <mlir/IR/BuiltinTypes.h>
 
 #include <list>
 
@@ -42,93 +41,25 @@ struct _AIUAttr : public _AIUObject<mlir::NamedAttribute> {
 
 struct _AIUModel : public _AIUObject<mlir::func::FuncOp> {
 
-  _AIUModel()
-      : _context(new mlir::MLIRContext(getRegistry())),
-        _loc(mlir::UnknownLoc::get(_context)), _block(nullptr), _opCnt(0) {
-
-    // load dialects
-    _context->loadDialect<mlir::func::FuncDialect, mlir::tosa::TosaDialect>();
-  }
-
+  _AIUModel();
   // Build interface
-  _AIUModel(const char *name_) : _AIUModel() {
-    mlir::OpBuilder b(_context);
-
-    std::string modname = "module_";
-    _module = mlir::ModuleOp::create(_loc, modname + name_);
-
-    _file = b.getStringAttr(name_);
-
-    auto funcType = b.getFunctionType({}, {});
-    _d = b.create<mlir::func::FuncOp>(_loc, name_, funcType);
-    // TODO: make conditional
-    _d->setAttr("kernel", b.getUnitAttr());
-
-    _block = _d.addEntryBlock();
-
-    _module.push_back(_d);
-  }
-
+  _AIUModel(const char *name_);
   // Clone interface
-  _AIUModel(mlir::func::FuncOp func) : _AIUModel() {
-    std::string modname = "module_";
-    _module = mlir::ModuleOp::create(_loc, (modname + func.getName()).str());
+  _AIUModel(mlir::func::FuncOp func);
+  ~_AIUModel();
 
-    // TODO: types in clone types also!!!
-    _d = func.clone();
+  AIUType getNextType(mlir::Type t);
+  AIUValue getNextValue(mlir::Value v);
+  AIUAttr getNextAttr(mlir::NamedAttribute a);
 
-    _module.push_back(_d);
-    // TODO: annotate ops with loc
-  }
+  mlir::Location getNextLoc();
+  mlir::OpBuilder getBuilder();
 
-  ~_AIUModel() { delete _context; }
-
-  AIUType getNextType(mlir::Type t) {
-    //_model_str.clear();
-    _types.emplace_back(t);
-    return &_types.back();
-  }
-
-  AIUValue getNextValue(mlir::Value v) {
-    //_model_str.clear();
-    _values.emplace_back(v);
-    return &_values.back();
-  }
-
-  AIUAttr getNextAttr(mlir::NamedAttribute a) {
-    //_model_str.clear();
-    _attrs.emplace_back(a);
-    return &_attrs.back();
-  }
-
-  mlir::Location getNextLoc() {
-    //_model_str.clear();
-    return mlir::FileLineColLoc::get(_file, _opCnt++, 0);
-  }
-  mlir::OpBuilder getBuilder() {
-    //_model_str.clear();
-    // TODO: store
-    return mlir::OpBuilder::atBlockEnd(_block);
-  }
-
-  const std::string &print() {
-    if (_model_str.empty()) {
-      llvm::raw_string_ostream os(_model_str);
-      mlir::OpPrintingFlags flags;
-      _module.print(os, flags.enableDebugInfo().assumeVerified());
-    }
-    return _model_str;
-  }
+  const std::string &print();
 
 private:
   mlir::MLIRContext *_context;
   mlir::Location _loc;
-
-  mlir::DialectRegistry &getRegistry() {
-    static mlir::DialectRegistry _reg;
-    _reg.insert<mlir::func::FuncDialect>(); // call once
-    return _reg;
-  }
 
   mlir::ModuleOp _module;
   mlir::Block *_block;

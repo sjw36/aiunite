@@ -25,11 +25,15 @@ extern "C" AIUResultCode AIUSendModelToDevice(AIUModel model,
 /*  SOLUTION RESPONSE                                                         */
 /******************************************************************************/
 
-extern "C" AIUResultCode AIURecvSolution(AIURequest request_,
+extern "C" AIUResultCode AIUGetRequestCount(AIURequest request_, int64_t *result_);
+
+extern "C" AIUResultCode AIURecvSolutions(AIURequest request_);
+
+extern "C" AIUResultCode AIUGetSolution(AIURequest request_, size_t index_,
                                          AIUSolution *result_);
 
-extern "C" AIUResultCode AIURecvSolutionFromDevice(AIURequest request_,
-                                                   AIUDevice device_,
-                                                   AIUSolution *result_);
+extern "C" AIUResultCode AIUGetSolutionFromDevice(AIURequest request_,
+                                                  AIUDevice device_,
+                                                  AIUSolution *result_);
 
 #endif /* AIUNITE_CLIENT_COMMS_H */

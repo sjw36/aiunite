@@ -41,9 +41,9 @@ typedef int AIUActionCode;
 /* REQUEST CODES */
 
 enum AIURequestCode {
+  AIU_REQUEST_LOOKUP,
   AIU_REQUEST_GET,
   AIU_REQUEST_GET_BEST,
-  AIU_REQUEST_GET_NOW,
   AIU_REQUEST_PARTITION,
   AIU_REQUEST_TUNE,
   AIU_REQUEST_BAD
@@ -58,5 +58,11 @@ const char *AIUGetRequestString(AIURequestCode code);
 #define AIU_RESPONSE_FAILURE 1
 
 typedef int AIUResponseCode;
+
+enum AIUSolutionCode {
+  AIU_SOLUTION_SUCCESS,
+  AIU_SOLUTION_INVALID_MODEL,
+  AIU_SOLUTION_FAILURE
+};
 
 #endif /* AIUNITE_PROTOCOL_H */
