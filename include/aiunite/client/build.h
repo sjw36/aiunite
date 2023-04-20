@@ -154,7 +154,7 @@ extern "C" AIUResultCode AIUGetType(AIUModel, AIUTypeEnum elemType,
                                     AIUType *result);
 
 extern "C" AIUResultCode AIUGetTensorType(AIUModel, int64_t dim_cnt,
-                                          int64_t dims[], AIUTypeEnum elemType,
+                                          const int64_t dims[], AIUTypeEnum elemType,
                                           AIUType *result);
 
 /*  - kernel func params */
@@ -163,30 +163,30 @@ extern "C" AIUResultCode AIUAddParameter(AIUModel func, AIUType type,
 
 /*  - make attribute */
 extern "C" AIUResultCode AIUMakeAttr(AIUModel func, AIUAttrEnum type,
-                                     void *value, AIUAttr *result);
+                                     const void *value, AIUAttr *result);
 
 /*  - make attribute */
 extern "C" AIUResultCode AIUMakeArrayAttr(AIUModel func, AIUAttrEnum type,
-                                          int64_t valCnt, void *value,
+                                          int64_t valCnt, const void *value,
                                           AIUAttr *result);
 
 /*  - add constant */
 extern "C" AIUResultCode AIUAddConstant(AIUModel func, AIUType resType,
-                                        void *value, AIUValue *result);
+                                        const void *value, AIUValue *result);
 
 /*  - add constant */
 extern "C" AIUResultCode AIUAddConstantSplat(AIUModel func, AIUType resType,
-                                             void *value, AIUValue *result);
+                                             const void *value, AIUValue *result);
 
 /*  - add operation */
 extern "C" AIUResultCode AIUAddOperation(AIUModel func, AIUOperationEnum type,
-                                         int64_t paramCnt, AIUValue *params,
+                                         int64_t paramCnt, const AIUValue *params,
                                          AIUType resType, AIUValue *result);
 
 /*  - add operation */
 extern "C" AIUResultCode
 AIUAddOperationWithAttrs(AIUModel func, AIUOperationEnum type, int64_t paramCnt,
-                         AIUValue *params, int64_t attrCnt, AIUAttr *attrs,
+                         const AIUValue *params, int64_t attrCnt, const AIUAttr *attrs,
                          AIUType resType, AIUValue *result);
 
 /*  - set return value */

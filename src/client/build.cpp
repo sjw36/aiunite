@@ -96,7 +96,7 @@ extern "C" AIUResultCode AIUGetType(AIUModel model_, AIUTypeEnum elemType_,
 }
 
 extern "C" AIUResultCode AIUGetTensorType(AIUModel model_, int64_t dimCnt_,
-                                          int64_t dims_[],
+                                          const int64_t dims_[],
                                           AIUTypeEnum elemType_,
                                           AIUType *result_) {
   AIU_LOG_FUNC(AIUGetTensorType);
@@ -221,7 +221,7 @@ const char *AIUGetAttrName(AIUAttrEnum attr) {
 
 /*  - make attribute */
 extern "C" AIUResultCode AIUMakeAttr(AIUModel func_, AIUAttrEnum type_,
-                                     void *value_, AIUAttr *result_) {
+                                     const void *value_, AIUAttr *result_) {
   AIU_LOG_FUNC(AIUMakeAttr);
   AIU_CHECK_OBJECT(func_);
   AIU_CHECK_RESULT(result_);
@@ -238,7 +238,7 @@ extern "C" AIUResultCode AIUMakeAttr(AIUModel func_, AIUAttrEnum type_,
   case AIU_PER_CHANNEL_ATTR:
   case AIU_ROUND_ATTR:
   case AIU_SCALE32_ATTR:
-    attr = b.getBoolAttr(*reinterpret_cast<int32_t *>(value_));
+    attr = b.getBoolAttr(*reinterpret_cast<const int32_t *>(value_));
     break;
   case AIU_MULTIPLIER_ATTR:
   case AIU_SHIFT_ARRAY_ATTR:
@@ -264,7 +264,7 @@ extern "C" AIUResultCode AIUMakeAttr(AIUModel func_, AIUAttrEnum type_,
     break;
   case AIU_MAX_FP_ATTR:
   case AIU_MIN_FP_ATTR:
-    attr = b.getF32FloatAttr(*reinterpret_cast<float *>(value_));
+    attr = b.getF32FloatAttr(*reinterpret_cast<const float *>(value_));
     break;
   case AIU_AXIS_ATTR:
   case AIU_INPUT_ZP_ATTR:
@@ -272,7 +272,7 @@ extern "C" AIUResultCode AIUMakeAttr(AIUModel func_, AIUAttrEnum type_,
   case AIU_MIN_INT_ATTR:
   case AIU_OUTPUT_ZP_ATTR:
   case AIU_SHIFT_ATTR:
-    attr = b.getI32IntegerAttr(*reinterpret_cast<int32_t *>(value_));
+    attr = b.getI32IntegerAttr(*reinterpret_cast<const int32_t *>(value_));
     break;
   case AIU_CONFIG_ATTR:
   case AIU_IDENTIFIER_ATTR:
@@ -302,13 +302,13 @@ extern "C" AIUResultCode AIUMakeAttr(AIUModel func_, AIUAttrEnum type_,
 }
 
 template <typename T>
-static llvm::ArrayRef<T> getARef(void *vals_, int64_t cnt_) {
-  return llvm::ArrayRef<T>(reinterpret_cast<T *>(vals_), cnt_);
+static llvm::ArrayRef<T> getARef(const void *vals_, int64_t cnt_) {
+  return llvm::ArrayRef<T>(reinterpret_cast<T *>(const_cast<void*>(vals_)), cnt_);
 }
 
 /*  - make attribute */
 extern "C" AIUResultCode AIUMakeArrayAttr(AIUModel func_, AIUAttrEnum type_,
-                                          int64_t valCnt_, void *value_,
+                                          int64_t valCnt_, const void *value_,
                                           AIUAttr *result_) {
   AIU_LOG_FUNC(AIUMakeArrayAttr);
   AIU_CHECK_OBJECT(func_);
@@ -354,7 +354,7 @@ extern "C" AIUResultCode AIUMakeArrayAttr(AIUModel func_, AIUAttrEnum type_,
 
 /*  - add constant */
 extern "C" AIUResultCode AIUAddConstant(AIUModel func_, AIUType resType_,
-                                        void *value_, AIUValue *result_) {
+                                        const void *value_, AIUValue *result_) {
   AIU_LOG_FUNC(AIUAddConstant);
   AIU_CHECK_OBJECT(func_);
   AIU_GET_OBJECT(resType);
@@ -388,7 +388,7 @@ extern "C" AIUResultCode AIUAddConstant(AIUModel func_, AIUType resType_,
 
 /*  - add constant */
 extern "C" AIUResultCode AIUAddConstantSplat(AIUModel func_, AIUType resType_,
-                                             void *value_, AIUValue *result_) {
+                                             const void *value_, AIUValue *result_) {
   AIU_LOG_FUNC(AIUAddConstantSplat);
   AIU_GET_OBJECT(func);
   AIU_GET_OBJECT(resType);
@@ -423,7 +423,7 @@ extern "C" AIUResultCode AIUAddConstantSplat(AIUModel func_, AIUType resType_,
 /*  - add operation */
 extern "C" AIUResultCode AIUAddOperation(AIUModel func_,
                                          AIUOperationEnum opType_,
-                                         int64_t paramCnt_, AIUValue *params_,
+                                         int64_t paramCnt_, const AIUValue *params_,
                                          AIUType resType_, AIUValue *result_) {
   AIU_LOG_FUNC(AIUAddOperation);
   AIU_CHECK_OBJECT(func_);
@@ -473,8 +473,8 @@ extern "C" AIUResultCode AIUAddOperation(AIUModel func_,
 /*  - add operation */
 extern "C" AIUResultCode
 AIUAddOperationWithAttrs(AIUModel func_, AIUOperationEnum opType_,
-                         int64_t paramCnt_, AIUValue *params_, int64_t attrCnt_,
-                         AIUAttr *attrs_, AIUType resType_, AIUValue *result_) {
+                         int64_t paramCnt_, const AIUValue *params_, int64_t attrCnt_,
+                         const AIUAttr *attrs_, AIUType resType_, AIUValue *result_) {
   AIU_LOG_FUNC(AIUAddOperationWithAttrs);
   AIU_CHECK_OBJECT(func_);
   AIU_CHECK_OBJECT(resType_);
