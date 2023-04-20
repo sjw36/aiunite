@@ -44,3 +44,14 @@ const char *AIUGetRequestString(AIURequestCode code) {
   }
   return "BAD";
 }
+
+#ifdef BOOST_NO_EXCEPTIONS
+#include <cassert>
+namespace boost {
+  void throw_exception( std::exception const & e ) {
+    printf("THROW!\n");
+    assert(0);
+  }
+}
+#endif // BOOST_NO_EXCEPTIONS
+

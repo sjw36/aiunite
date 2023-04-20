@@ -6,6 +6,8 @@
 
 #include <_aiu/logger.h>
 
+#ifndef BOOST_NO_RTTI
+
 #include <boost/log/utility/setup/common_attributes.hpp>
 
 namespace logging = boost::log;
@@ -24,3 +26,5 @@ AIULog::AIULog() {
                           keywords::format = "[%TimeStamp%]: %Message%");
   }
 }
+
+#endif // BOOST_NO_RTTI

@@ -6,6 +6,8 @@
 #ifndef _AIU_LOGGER_H
 #define _AIU_LOGGER_H
 
+#ifndef BOOST_NO_RTTI
+
 #define BOOST_LOG_DYN_LINK 1
 #include <boost/log/core.hpp>
 #include <boost/log/expressions.hpp>
@@ -48,11 +50,15 @@ public:
 #define AIU_LOG_ERROR(X) BOOST_LOG_SEV(AIULog::get(), ::boost::log::trivial::error) << X
 #define AIU_LOG_FUNC(X) AIULog::FuncTrace _AIU_LOG_FUNC_TRACE(#X)
 //#define AIU_LOG1(X,ARGS...) AIULog::FuncTrace _AIU_LOG_FUNC_TRACE(#X, ARGS)
-#else
-#define AIU_LOG_INFO(X)
-#define AIU_LOG_DBG(X)
-#define AIU_LOG_ERROR(X)
-#define AIU_LOG_FUNC(X)
+#endif
+#endif // BOOST_NO_RTTI
+
+#ifndef AIU_LOG_INFO
+#include <iostream>
+#define AIU_LOG_INFO(X) std::cout << "LOG(info): " << X << std::endl
+#define AIU_LOG_DBG(X) std::cout << "LOG(debug): " << X << std::endl
+#define AIU_LOG_ERROR(X) std::cout << "LOG(error): " << X << std::endl
+#define AIU_LOG_FUNC(X) std::cout << "API(func): " << #X << std::endl
 #endif
 
 #endif /* _AIU_LOGGER_H */

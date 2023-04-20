@@ -59,16 +59,22 @@ static auto getStream(const std::string &host, const std::string &port,
   beast::tcp_stream stream(ioc);
   AIU_LOG_INFO("AIUDeviceRequest::setup: " << host << ", " << port
                << std::endl);
+#ifndef BOOST_NO_EXCEPTIONS
   try {
+#endif // BOOST_NO_EXCEPTIONS
     auto const results = resolver.resolve(host.c_str(), port.c_str());
 
     // Make the connection on the IP address we get from a lookup
     stream.connect(results);
 
+#ifndef BOOST_NO_EXCEPTIONS
   } catch (std::exception const &e) {
     AIU_LOG_ERROR("AIUDeviceRequest::setup: " << e.what());
     *status = AIU_STREAM_STATUS_FAIL;
   }
+#else
+  /// DO SOMETHING ELSE FOR ERRORs
+#endif // BOOST_NO_EXCEPTIONS
 
   return stream;
 }
@@ -125,7 +131,9 @@ struct _AIUDeviceRequest {
 
       const char *target = "/foo";
       int version = 10;
+#ifndef BOOST_NO_EXCEPTIONS
       try {
+#endif // BOOST_NO_EXCEPTIONS
         // Set up an HTTP GET request message
         http::request<http::string_body> req{http::verb::get, target, version};
         req.set(http::field::host, device->getHost());
@@ -145,10 +153,12 @@ struct _AIUDeviceRequest {
 
         request_status = AIU_REQUEST_STATUS_SENT;
         status = AIU_SUCCESS;
+#ifndef BOOST_NO_EXCEPTIONS
       } catch (std::exception const &e) {
         AIU_LOG_ERROR("AIUDeviceRequest::send: " << e.what());
         request_status = AIU_REQUEST_STATUS_FAIL;
       }
+#endif // BOOST_NO_EXCEPTIONS
     }
     return status;
   }
@@ -162,7 +172,9 @@ struct _AIUDeviceRequest {
       // Declare a container to hold the response
       http::response<http::dynamic_body> res;
 
+#ifndef BOOST_NO_EXCEPTIONS
       try {
+#endif // BOOST_NO_EXCEPTIONS
         // Receive the HTTP response
         http::read(stream, buffer, res);
 
@@ -176,11 +188,13 @@ struct _AIUDeviceRequest {
 
         request_status = AIU_REQUEST_STATUS_RECV;
         status = AIU_SUCCESS;
+#ifndef BOOST_NO_EXCEPTIONS
       } catch (std::exception const &e) {
         AIU_LOG_ERROR("AIUDeviceRequest::recv: " << e.what());
         request_status = AIU_REQUEST_STATUS_FAIL;
         return status;
       }
+#endif // BOOST_NO_EXCEPTIONS
 
       result = boost::beast::buffers_to_string(res.body().data());
     }
@@ -212,10 +226,13 @@ AIUDeviceRequest _AIUDevice::sendRequest(AIURequestCode code,
 
 #include <vector>
 
+
+#ifndef BOOST_NO_EXCEPTIONS
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 
 using namespace boost::filesystem;
+#endif // BOOST_NO_EXCEPTIONS
 
 ///////////////////////////////////////////////////////////////////////////////
 ////  Device Management
@@ -226,6 +243,7 @@ AIUDevices::AIUDevices() {
   const char *etc_path = "/etc/aiunite";
   AIU_LOG_INFO("AIUDevices in: " << etc_path);
   // read /etc/aiunite and add kg for each file
+#ifndef BOOST_NO_EXCEPTIONS
   for (auto fpath : directory_iterator(etc_path)) {
     if (is_regular_file(fpath)) {
       std::string port, host, name, device_type;
@@ -236,6 +254,14 @@ AIUDevices::AIUDevices() {
           new _AIUDevice(port, host, name, AIU_DEVICE_TYPE_GPU));
     }
   }
+#else
+  // TODO: don't use boost::filesystem (requires exceptions)
+  // for now hard code
+      std::string port="16501", host="0.0.0.0", name="rockg", device_type="gpu";
+      AIU_LOG_INFO("AIUDevice: " << host << ", " << port << ", " << name);
+      device_vec.push_back(
+          new _AIUDevice(port, host, name, AIU_DEVICE_TYPE_GPU));
+#endif // BOOST_NO_EXCEPTIONS
 }
 
 size_t AIUDevices::size() const { return device_vec.size() - 1; }

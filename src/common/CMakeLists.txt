@@ -23,5 +23,14 @@ PARTIAL_SOURCES_INTENDED
   
 )
 
-target_compile_options(AIUniteCommon PUBLIC -fexceptions -frtti)
+if(AIUNITE_ENABLE_EXCEPTIONS)
+  target_compile_options(AIUniteService PUBLIC -fexceptions)
+else()
+  add_definitions(-DBOOST_NO_EXCEPTIONS)
+endif()
+if(AIUNITE_ENABLE_RTTI)
+  target_compile_options(AIUniteService PUBLIC -frtti)
+else()
+  add_definitions(-DBOOST_NO_RTTI)
+endif()
 

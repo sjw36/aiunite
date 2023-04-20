@@ -23,12 +23,14 @@ set(MLIR_CMAKE_CONFIG_DIR
 # MLIR settings
 set(MLIR_TABLEGEN_EXE mlir-tblgen)
 
-# LLVM settings
+# LLVM settings that have an effect on the MLIR dialect
+set(LLVM_TARGETS_TO_BUILD "" CACHE STRING "")
 set(LLVM_ENABLE_PROJECTS "mlir" CACHE STRING "List of default llvm targets")
 set(LLVM_BUILD_EXAMPLES ON CACHE BOOL "")
 set(LLVM_INSTALL_UTILS ON CACHE BOOL "")
 set(LLVM_ENABLE_TERMINFO OFF CACHE BOOL "")
 set(LLVM_ENABLE_ASSERTIONS ON CACHE BOOL "")
+set(LLVM_ENABLE_ZLIB "OFF" CACHE STRING "")
 
 # Cmake module paths
 list(APPEND CMAKE_MODULE_PATH

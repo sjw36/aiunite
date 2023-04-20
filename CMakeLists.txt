@@ -23,11 +23,8 @@ endif()
 # Set policy CMP0057 to support IN_LIST operators
 cmake_policy(SET CMP0057 NEW)
 
-set(LLVM_ENABLE_ZLIB "OFF" CACHE STRING "")
-set(LLVM_ENABLE_TERMINFO OFF CACHE BOOL "")
-
-# LLVM settings that have an effect on the MLIR dialect
-set(LLVM_TARGETS_TO_BUILD "" CACHE STRING "")
+option(AIUNITE_ENABLE_EXCEPTIONS "Disable exception handling in boost" ON)
+option(AIUNITE_ENABLE_RTTI "Disable exception handling in boost" ON)
 
 # Pointers to: 1) external LLVM bins/libs, and 2) AIUnite bins/libs
 set(AIUNITE_BIN_DIR "${CMAKE_CURRENT_BINARY_DIR}/bin" CACHE PATH "")
