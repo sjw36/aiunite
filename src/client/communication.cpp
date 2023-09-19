@@ -29,6 +29,8 @@
 #include <iostream>
 #include <string>
 
+#include <dirent.h>
+
 #include <_aiu/logger.h>
 
 namespace beast = boost::beast; // from <boost/beast.hpp>
@@ -243,7 +245,8 @@ AIUDevices::AIUDevices() {
   const char *etc_path = "/etc/aiunite";
   AIU_LOG_INFO("AIUDevices in: " << etc_path);
   // read /etc/aiunite and add kg for each file
-#ifndef BOOST_NO_EXCEPTIONS
+#if 0 // disable boost filesystem
+  //#ifndef BOOST_NO_EXCEPTIONS
   for (auto fpath : directory_iterator(etc_path)) {
     if (is_regular_file(fpath)) {
       std::string port, host, name, device_type;
@@ -255,12 +258,20 @@ AIUDevices::AIUDevices() {
     }
   }
 #else
-  // TODO: don't use boost::filesystem (requires exceptions)
-  // for now hard code
-      std::string port="16501", host="0.0.0.0", name="rockg", device_type="gpu";
+  DIR *dir;
+  struct dirent *ent;
+  if ((dir = opendir(etc_path)) != NULL) {
+    /* print all the files and directories within directory */
+    while ((ent = readdir (dir)) != NULL) {
+      std::string port, host, name, device_type;
+      ifstream file(ent->d_name);
+      file >> port >> host >> name >> device_type;
       AIU_LOG_INFO("AIUDevice: " << host << ", " << port << ", " << name);
       device_vec.push_back(
           new _AIUDevice(port, host, name, AIU_DEVICE_TYPE_GPU));
+    }
+    closedir (dir);
+  }
 #endif // BOOST_NO_EXCEPTIONS
 }
 

@@ -20,7 +20,8 @@ PARTIAL_SOURCES_INTENDED
   MLIRCAPIIR
   MLIRFuncDialect
   MLIRTosaDialect
-  MLIRXModel
+  MLIRLinalgDialect
+  MLIRMHAL
 
   boost_date_time
   boost_exception

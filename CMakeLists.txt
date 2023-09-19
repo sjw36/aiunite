@@ -52,6 +52,7 @@ endif()
 
 # Set up the build for the LLVM/MLIR git-submodule
 include(cmake/llvm-project.cmake)
+include(cmake/mlir-hal.cmake)
 
 # Update the build-tree RPATH
 set(CMAKE_BUILD_RPATH "${AIUNITE_LIB_DIR};${LLVM_EXTERNAL_LIB_DIR}")
@@ -61,6 +62,8 @@ option(AIU_ENABLE_LOGGING "Enable logging" ON)
 if(AIU_ENABLE_LOGGING)
   add_compile_definitions(AIU_LOGGING_ENABLED)
 endif()
+
+find_package(Boost 1.71.0 EXACT REQUIRED)
 
 include_directories(${PROJECT_SOURCE_DIR}/include)
 include_directories(${PROJECT_SOURCE_DIR}/internal)

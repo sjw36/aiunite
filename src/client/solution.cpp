@@ -16,7 +16,7 @@
 #include <mlir/Dialect/Linalg/IR/Linalg.h>
 #include <mlir/Dialect/MemRef/IR/MemRef.h>
 #include <mlir/Dialect/Tosa/IR/TosaOps.h>
-#include <mlir/Dialect/XModel/IR/XModel.h>
+#include <mlir/Dialect/MHAL/IR/MHAL.h>
 #include <mlir/Parser/Parser.h>
 
 struct _AIUBinary {
@@ -40,7 +40,7 @@ static mlir::DialectRegistry &getRegistry() {
   // call_once
   _reg.insert<mlir::func::FuncDialect>();
   _reg.insert<mlir::memref::MemRefDialect>();
-  _reg.insert<mlir::xmodel::XModelDialect>();
+  _reg.insert<mlir::mhal::MHALDialect>();
   _reg.insert<mlir::linalg::LinalgDialect>();
   return _reg;
 }
@@ -67,10 +67,10 @@ AIUBinary _AIUSolution::getBinary(const char *func_name_) {
   //lookup func by name
   if (auto func = _d.lookupSymbol<mlir::func::FuncOp>(func_name_)) {
     // get xmodel targets
-    if (auto targets = func->getAttrOfType<mlir::ArrayAttr>("xmodel.targets")) {
+    if (auto targets = func->getAttrOfType<mlir::ArrayAttr>("mhal.targets")) {
       assert(targets.getValue().size() == 1);
       for (auto targetAttr : targets.getValue()) {
-        auto pkgAttr = targetAttr.cast<mlir::xmodel::KernelPackageAttr>();
+        auto pkgAttr = targetAttr.cast<mlir::mhal::KernelPackageAttr>();
         // check arch and type
         // auto type = pkgAttr.getType();
         auto dims = pkgAttr.getLaunchDims();

@@ -366,16 +366,16 @@ extern "C" AIUResultCode AIUAddConstant(AIUModel func_, AIUType resType_,
   auto resShapeType = resType.cast<mlir::ShapedType>();
   auto elemType = resShapeType.getElementType();
 
-  mlir::Attribute attr;
+  mlir::ElementsAttr attr;
   if (elemType.isF32()) {
     attr = mlir::DenseFPElementsAttr::get(
-        resType, getARef<float>(value_, resShapeType.getNumElements()));
+        resShapeType, getARef<float>(value_, resShapeType.getNumElements()));
   } else if (elemType.isInteger(64)) {
     attr = mlir::DenseIntElementsAttr::get(
-        resType, getARef<int64_t>(value_, resShapeType.getNumElements()));
+        resShapeType, getARef<int64_t>(value_, resShapeType.getNumElements()));
   } else if (elemType.isInteger(32)) {
     attr = mlir::DenseIntElementsAttr::get(
-        resType, getARef<int32_t>(value_, resShapeType.getNumElements()));
+        resShapeType, getARef<int32_t>(value_, resShapeType.getNumElements()));
   } else {
     return AIU_FAILURE;
   }
@@ -401,15 +401,15 @@ extern "C" AIUResultCode AIUAddConstantSplat(AIUModel func_, AIUType resType_,
   auto resShapeType = resType.cast<mlir::ShapedType>();
   auto elemType = resShapeType.getElementType();
 
-  mlir::Attribute attr;
+  mlir::ElementsAttr attr;
   if (elemType.isF32()) {
-    attr = mlir::DenseFPElementsAttr::get(resType, getARef<float>(value_, 1));
+    attr = mlir::DenseFPElementsAttr::get(resShapeType, getARef<float>(value_, 1));
   } else if (elemType.isInteger(64)) {
     attr =
-        mlir::DenseIntElementsAttr::get(resType, getARef<int64_t>(value_, 1));
+        mlir::DenseIntElementsAttr::get(resShapeType, getARef<int64_t>(value_, 1));
   } else if (elemType.isInteger(32)) {
     attr =
-        mlir::DenseIntElementsAttr::get(resType, getARef<int32_t>(value_, 1));
+        mlir::DenseIntElementsAttr::get(resShapeType, getARef<int32_t>(value_, 1));
   } else {
     return AIU_FAILURE;
   }
