@@ -4,3 +4,4 @@
 [submodule "external/mlir-hal"]
 	path = external/mlir-hal
 	url = git@github.com:ROCmSoftwarePlatform/mlir-hal.git
+        branch = master
