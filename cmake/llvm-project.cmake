@@ -2,12 +2,10 @@ message(STATUS "Adding LLVM git-submodule src dependency")
 
 option(AIUNITE_USE_LOCAL_LLVM "Use local LLVM in external/llvm-project" ON)
 
-set(AIUNITE_LLVM_PROJECT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/llvm-project" CACHE PATH "LLVM source dir")
-
+option(AIUNITE_LLVM_PROJECT_DIR "LLVM source dir" "${CMAKE_CURRENT_SOURCE_DIR}/external/llvm-project")
 message(STATUS "AIUNITE_LLVM_PROJECT_DIR: ${AIUNITE_LLVM_PROJECT_DIR}")
 
-set(AIUNITE_LLVM_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/external/llvm-project" CACHE PATH "LLVM binary dir")
-
+option(AIUNITE_LLVM_BINARY_DIR "LLVM binary dir" "${CMAKE_CURRENT_BINARY_DIR}/external/llvm-project")
 message(STATUS "AIUNITE_LLVM_BINARY_DIR: ${AIUNITE_LLVM_BINARY_DIR}")
 
 set(LLVM_MAIN_SRC_DIR "${AIUNITE_LLVM_PROJECT_DIR}/llvm" CACHE PATH "Path to LLVM sources")

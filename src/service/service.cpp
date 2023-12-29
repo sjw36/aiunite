@@ -817,12 +817,15 @@ private:
 //------------------------------------------------------------------------------
 
 extern "C" AIUResultCode AIUCreateService(int port, AIUCallBack callback) {
-  AIU_LOG_FUNC(AIUCreateService);
   const char *host = "0.0.0.0";
   auto const address = net::ip::make_address(host);
   auto const doc_root = std::make_shared<std::string>(".");
   const int threads = 8;
 
+  AIU_LOG_FUNC(AIUCreateService);
+  AIU_LOG_DBG("Address: " << host);
+  AIU_LOG_DBG("   Port: " << port);
+  
   // The io_context is required for all I/O
   net::io_context ioc{threads};
 
