@@ -26,6 +26,7 @@
 #include <boost/beast/version.hpp>
 #include <boost/uuid/detail/md5.hpp>
 #include <cstdlib>
+#include <fstream>
 #include <iostream>
 #include <string>
 
@@ -242,7 +243,7 @@ AIUDevices::AIUDevices() {
   device_vec.reserve(8);
   // add non-device
   device_vec.push_back(new _AIUDevice("", "", "", AIU_DEVICE_TYPE_NONE));
-  const char *etc_path = "/etc/aiunite";
+  const std::string etc_path = "/etc/aiunite";
   AIU_LOG_INFO("AIUDevices in: " << etc_path);
   // read /etc/aiunite and add kg for each file
 #if 0 // disable boost filesystem
@@ -260,15 +261,18 @@ AIUDevices::AIUDevices() {
 #else
   DIR *dir;
   struct dirent *ent;
-  if ((dir = opendir(etc_path)) != NULL) {
+  if ((dir = opendir(etc_path.c_str())) != NULL) {
     /* print all the files and directories within directory */
     while ((ent = readdir (dir)) != NULL) {
-      std::string port, host, name, device_type;
-      ifstream file(ent->d_name);
-      file >> port >> host >> name >> device_type;
-      AIU_LOG_INFO("AIUDevice: " << host << ", " << port << ", " << name);
-      device_vec.push_back(
-          new _AIUDevice(port, host, name, AIU_DEVICE_TYPE_GPU));
+      if (ent->d_type == DT_REG) {
+        std::string port, host, name, device_type;
+        std::string fname = etc_path + "/" + ent->d_name;
+        std::ifstream file(fname);
+        file >> port >> host >> name >> device_type;
+        AIU_LOG_INFO("AIUDevice: " << host << ", " << port << ", " << name);
+        device_vec.push_back(
+            new _AIUDevice(port, host, name, AIU_DEVICE_TYPE_GPU));
+      }
     }
     closedir (dir);
   }
