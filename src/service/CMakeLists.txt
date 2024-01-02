@@ -28,6 +28,12 @@ PARTIAL_SOURCES_INTENDED
   LINK_COMPONENTS
 )
 
+target_include_directories(AIUniteService
+  PUBLIC
+  $<BUILD_INTERFACE:${AIUNITE_PROJECT_DIR}/include>
+  $<BUILD_INTERFACE:${AIUNITE_PROJECT_DIR}/internal>
+)
+
 if(AIUNITE_ENABLE_EXCEPTIONS)
   target_compile_options(AIUniteService PUBLIC -fexceptions)
 else()
